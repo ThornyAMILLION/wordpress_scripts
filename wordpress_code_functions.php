@@ -44,18 +44,20 @@
             $order_status = $_POST['orderStatus'];
             $order = wc_get_order($order_number);
             
+            $text_response = "Order status changed to ";
+
             if ($order_status == 'On Hold') {
                 $order->update_status('wc-on-hold');
-                echo "Order status changed to " . $order_status;
+                echo $text_response . $order_status;
             } else if ($order_status == 'Processing') {
                 $order->update_status('wc-processing');
-                echo "Order status changed to " . $order_status;
+                echo $text_response . $order_status;
             } else if ($order_status == 'Completed') {
                 $order->update_status('wc-completed');
-                echo "Order status changed to " . $order_status;
+                echo $text_response . $order_status;
             } else if ($order_status == 'Pending Payment') {
                 $order->update_status('wc-pending-payment');
-                echo "Order status changed to " . $order_status;
+                echo $text_response . $order_status;
             } else {
                 echo "Order status does not match options";
             }
