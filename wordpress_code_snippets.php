@@ -111,3 +111,77 @@
         $name = $product->get_name() . " - " . $product->get_description();
         return $name;
     }, 10, 2);
+
+    // Wordpress snippets - Product catalogue inventory check
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                // add to cart button
+                $('body').on('click', '.b2bking_bulkorder_indigo_add', function() {
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
+                    let product_arr = [];
+
+                    // loader icon
+                    let thisbutton = $(this);
+                    $(this).html('<img class="b2bking_loader_icon_button_indigo" src="'+b2bking_display_settings.loadertransparenturl+'">');
+
+                    let textinput = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_product');
+                    var productID = 0;
+                    let product = $(this).parent().parent().find('.b2bking_bulkorder_indigo_name.b2bking_bulkorder_cream_name')[1];
+                    product = $(product).html();
+                    product = product.split(' ')[0] +  product.split(' ')[2];
+                    var classList = $(textinput).attr('class').split(/\s+/);
+                    $.each(classList, function(index, item) {
+                        // foreach line if it has selected class, get selected product ID 
+                        if (item.includes('b2bking_selected_product_id_')) {
+                            productID = item.split('_')[4];
+                        }
+                    });
+                    let qty = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_qty').val();
+
+                    product_arr.push([productID, product, qty]);
+                    console.log(product_arr)
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            'action': 'b2bking_add_to_cart_check_inventory_ajax',
+                            'products': product_arr
+                        }, success: function(data) {
+                            if (data == 'success') {
+                                var datavar = {
+                                    action: 'b2bking_bulkorder_add_cart_item',
+                                    security: b2bking_display_settings.security,
+                                    productid: productID,
+                                    productqty: qty,
+                                };
+
+                                $.post(b2bking_display_settings.ajaxurl, datavar, function(response) {
+                                    if (response === 'success') {
+                                        // set button to 'Add more'
+                                        $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                                        // Refresh cart fragments
+                                        $(document.body).trigger('wc_fragment_refresh');
+                                    }
+                                });
+                            } else {
+                                console.log('Fail: Product does not have inventory. | ', data);
+                                // set button to 'Add more'
+                                $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                                // Refresh cart fragments
+                                $(document.body).trigger('wc_fragment_refresh');
+                            }
+                        }, error: function(error) {
+                            console.log('Something went wrong: ', error.responseText);
+                            // set button to 'Add more'
+                            $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                            // Refresh cart fragments
+                            $(document.body).trigger('wc_fragment_refresh');
+                        }
+                    });
+                });
+            });
+        </script>
+        <?php
+    });
