@@ -116,24 +116,30 @@
             $url = 'http://70.25.52.182:33333/?token=uULQwr6GNmNQSbbGefmN9qOUwvJ96OYy&check=';
             $products_len = count($products);
             $count = 0;
-            $error = '';
+            $no_inventory = '';
             
             foreach($products as $product) {
                 $response = wp_remote_get($url . $product[1]);
                 $response = $response['body'];
                 $response = json_decode($response);
                 
+                $count_previous_value = $count;			
                 foreach($response->int as $part) {
                     if ($part->{'s'} == $product[1] && $product[2] < $part->{'q'}) {
                         $count += 1;
                     }
                 }
+                
+                if ($count_previous_value == $count) {
+                    $no_inventory .= $product[1] . '|';
+                }
+                
             }
             
             if ($count == $products_len) {
                 echo "success";
             } else {
-                echo "fail: count - " . $count . ' products - ' . $products_len;
+                echo "fail: count - " . $count . ' products - ' . $products_len . ' | ' . $no_inventory;
             }
         }
         die();
@@ -150,3 +156,12 @@
         }
     }
     add_action('template_redirect', 'my_redirect_if_user_not_logged_in');
+
+    // Add custom field to orders to show 2 percent early pay
+    function new_order_2_percent_meta_data($order_id) {
+        $order = wc_get_order($order_id);
+        $subtotal = $order->get_subtotal();
+        $two_percent_total = $subtotal * 0.98;
+        update_post_meta($order_id, 'two_percent_early_pay', $two_percent_total);
+    }
+    add_action('woocommerce_checkout_update_order_meta', 'new_order_2_percent_meta_data');

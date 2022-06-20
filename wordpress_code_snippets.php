@@ -121,11 +121,11 @@
                 $('body').on('click', '.b2bking_bulkorder_indigo_add', function() {
                     let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
                     let product_arr = [];
-
+    
                     // loader icon
                     let thisbutton = $(this);
                     $(this).html('<img class="b2bking_loader_icon_button_indigo" src="'+b2bking_display_settings.loadertransparenturl+'">');
-
+    
                     let textinput = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_product');
                     var productID = 0;
                     let product = $(this).parent().parent().find('.b2bking_bulkorder_indigo_name.b2bking_bulkorder_cream_name')[1];
@@ -139,7 +139,7 @@
                         }
                     });
                     let qty = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_qty').val();
-
+    
                     product_arr.push([productID, product, qty]);
                     console.log(product_arr)
                     $.ajax({
@@ -156,7 +156,7 @@
                                     productid: productID,
                                     productqty: qty,
                                 };
-
+    
                                 $.post(b2bking_display_settings.ajaxurl, datavar, function(response) {
                                     if (response === 'success') {
                                         // set button to 'Add more'
@@ -168,7 +168,7 @@
                             } else {
                                 console.log('Fail: Product does not have inventory. | ', data);
                                 // set button to 'Add more'
-                                $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                                $(thisbutton).html("No Inventory");
                                 // Refresh cart fragments
                                 $(document.body).trigger('wc_fragment_refresh');
                             }
