@@ -90,7 +90,7 @@ if ( $show_downloads ) {
 			?>
 			    <tr>
 			        <th scope="row">Early Pay</th>
-			        <td>$<?php echo round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2)?></td>
+			        <td>$<?php echo round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2) ?></td>
 			    </tr>
 			<?php if ( $order->get_customer_note() ) : ?>
 				<tr>
