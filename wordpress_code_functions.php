@@ -160,8 +160,22 @@
     // Add custom field to orders to show 2 percent early pay
     function new_order_2_percent_meta_data($order_id) {
         $order = wc_get_order($order_id);
-        $subtotal = $order->get_subtotal();
-        $two_percent_total = $subtotal * 0.98;
+        $tax_total = $order->get_total_tax();
+        
+        // Calculate subtotal excluding items that do not have 2% discount
+        $prices_to_discount = 0;
+        $prices_to_add = 0;
+        foreach ($order->get_items() as $item) {
+            $product = wc_get_product($item->get_product_id());
+            $temp_item = $product->get_sku();
+            if (!stristr($temp_item, 'AFN')) {
+                $prices_to_discount += number_format($item->get_total());
+            } else {
+                $prices_to_add += number_format($item->get_total());
+            }
+        }
+        
+        $two_percent_total = ($prices_to_discount * 0.98) + $prices_to_add + $tax_total;
         update_post_meta($order_id, 'two_percent_early_pay', $two_percent_total);
     }
     add_action('woocommerce_checkout_update_order_meta', 'new_order_2_percent_meta_data');

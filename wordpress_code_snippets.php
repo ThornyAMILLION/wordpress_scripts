@@ -130,7 +130,11 @@
                     var productID = 0;
                     let product = $(this).parent().parent().find('.b2bking_bulkorder_indigo_name.b2bking_bulkorder_cream_name')[1];
                     product = $(product).html();
-                    product = product.split(' ')[0] +  product.split(' ')[2];
+                    if (product.split(' ')[2] == 'AFN') {
+                        product = product.split(' ')[2] + product.split(' ')[0].slice(1);
+                    } else {
+                        product = product.split(' ')[0] + product.split(' ')[2];
+                    }
                     var classList = $(textinput).attr('class').split(/\s+/);
                     $.each(classList, function(index, item) {
                         // foreach line if it has selected class, get selected product ID 

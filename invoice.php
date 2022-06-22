@@ -151,10 +151,12 @@
 								<td class="price"><span class="totals-price"><?php echo $total['value']; ?></span></td>
 							</tr>
 						<?php endforeach; ?>
-						<tr class="<?php echo $key; ?>">
-							<th class="description">Early Pay</th>
-							<td class="price"><span class="totals-price">$<?php echo round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2) ?></span></td>
-						</tr>
+						<?php if (get_post_meta($order->get_id(), 'two_percent_early_pay', true)) : ?>
+							<tr class="<?php echo $key; ?>">
+								<th class="description">Early Pay</th>
+								<td class="price"><span class="totals-price">$<?php echo round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2) ?></span></td>
+							</tr>
+						<?php endif; ?>
 					</tfoot>
 				</table>
 			</td>
@@ -162,7 +164,9 @@
 	</tfoot>
 </table>
 
-<div class="bottom-spacer"></div>
+<div class="bottom-spacer">
+    <p>NOTE: Eligiable for early pay only if paid within 10 days. 2% interest per month on all accounts over 30 days. 5% handling fee on all new returns. All goods to be returned must be in original package. Within 5 days of shipment all discrepancy must be reported.</p>
+</div>
 
 <?php do_action( 'wpo_wcpdf_after_order_details', $this->get_type(), $this->order ); ?>
 
