@@ -20,7 +20,11 @@
                                 let quantity = $(textinput).parent().find('.b2bking_bulkorder_form_container_content_line_qty').val();
                                 quantity = Number(quantity);
                                 let product = $(textinput).val();
-                                product = product.split(' ')[0] +  product.split(' ')[2];
+                                if (product.split(' ')[2] == 'AFN') {
+                                    product = product.split(' ')[2] + product.split(' ')[0].slice(1);
+                                } else {
+                                    product = product.split(' ')[0] + product.split(' ')[2];
+                                }
                                 
                                 product_arr.push([productID, product, quantity]);
                             }

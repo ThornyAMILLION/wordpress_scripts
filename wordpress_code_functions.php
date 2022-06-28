@@ -14,6 +14,8 @@
                 $('#wpforms-submit-12023').click(function() {
                     let orderNum = $('#wpforms-12023-field_1').val();
                     let orderStatus = $('#wpforms-12023-field_2').val();
+                    let orderDiscountCheck = $('#wpforms-12023-field_5_1').is(':checked');
+                    let orderDiscountFullAmountCheck = $('#wpforms-12023-field_5_2').is(':checked');
                     
                     $.ajax({
                         url: ajaxurl, // Since WP 2.8 ajaxurl is always defined and points to admin-ajax.php
@@ -21,7 +23,9 @@
                         data: {
                             'action': 'change_order_status_ajax', // This is our PHP function below
                             'orderNum' : orderNum,
-                            'orderStatus': orderStatus
+                            'orderStatus': orderStatus,
+                            'discountCheck': orderDiscountCheck,
+                            'fullAmount': orderDiscountFullAmountCheck
                         },
                         success: function(data) {
                             // This outputs the result of the ajax request (The Callback)
@@ -42,24 +46,37 @@
         if(isset($_POST)) {
             $order_number = $_POST['orderNum'];
             $order_status = $_POST['orderStatus'];
+            $order_discount_check = $_POST['discountCheck'];
+		    $order_full_amount = $_POST['fullAmount'];
             $order = wc_get_order($order_number);
             
             $text_response = "Order status changed to ";
 
-            if ($order_status == 'On Hold') {
-                $order->update_status('wc-on-hold');
-                echo $text_response . $order_status;
-            } else if ($order_status == 'Processing') {
-                $order->update_status('wc-processing');
-                echo $text_response . $order_status;
-            } else if ($order_status == 'Completed') {
-                $order->update_status('wc-completed');
-                echo $text_response . $order_status;
-            } else if ($order_status == 'Pending Payment') {
-                $order->update_status('wc-pending-payment');
-                echo $text_response . $order_status;
-            } else {
-                echo "Order status does not match options";
+            switch($order_status) {
+                case 'On Hold':
+                    $order->update_status('wc-on-hold');
+                    echo $text_response . $order_status;
+                    break;
+                case 'Processing':
+                    $order->update_status('wc-processing');
+                    echo $text_response . $order_status;
+                    break;
+                case 'Completed':
+                    if ($order_discount_check == "true" && $order_full_amount == "false") {
+                        $new_total = round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2);
+					    $order->set_total(strval($new_total));
+                    }
+
+                    $order->update_status('wc-completed');
+                    echo $text_response . $order_status;
+                    break;
+                case 'Pending Payment':
+                    $order->update_status('wc-pending-payment');
+                    echo $text_response . $order_status;
+                    break;
+                default:
+                    echo "Order status does not match options";
+                    break;
             }
         }
         

@@ -153,7 +153,7 @@
 						<?php endforeach; ?>
 						<?php if (get_post_meta($order->get_id(), 'two_percent_early_pay', true)) : ?>
 							<tr class="<?php echo $key; ?>">
-								<th class="description">Early Pay</th>
+								<th class="description">Early Pay (2% 10 Days)</th>
 								<td class="price"><span class="totals-price">$<?php echo round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2) ?></span></td>
 							</tr>
 						<?php endif; ?>
