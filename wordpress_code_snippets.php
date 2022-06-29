@@ -282,4 +282,25 @@
                 wc_add_notice( esc_html__( 'We could not match any products with the following SKUs: ', 'b2bking' ).$skus_string, 'error' );
             }
         }
-    }    
+    }  
+    
+    function get_all_customer_orders() {
+        $customer_orders = get_posts(array(
+            'numberposts' => -1,
+            'meta_key'    => '_customer_user',
+            'meta_value'  => get_current_user_id(),
+            'post_type'   => wc_get_order_types(),
+            'post_status' => array_keys(wc_get_order_statuses()),
+        ));
+    
+        $orders_array = [];
+    
+        foreach($customer_orders as $key => $id) {
+            $order = wc_get_order($id->ID);
+            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total, 'item_count' => $order->get_item_count(), 'date_created' => $order->get_date_created()];
+            array_push($orders_array, $order_info);
+        }
+        print_r($orders_array);
+        return $orders_array;
+    }
+    add_shortcode('statements', 'get_all_customer_orders');
