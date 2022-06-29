@@ -284,6 +284,7 @@
         }
     }  
     
+    // Get all customer orders
     function get_all_customer_orders() {
         $customer_orders = get_posts(array(
             'numberposts' => -1,
@@ -300,7 +301,15 @@
             $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total, 'item_count' => $order->get_item_count(), 'date_created' => $order->get_date_created()];
             array_push($orders_array, $order_info);
         }
-        print_r($orders_array);
-        return $orders_array;
+        
+        $html = '<div><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody>';
+        
+        foreach($order_array as $key => $item) {
+            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created']->date . '</td><td>' . $item['subtotal'] . '</td><td>' . $item['tax'] . '</td><td>' . $item['total'] . '</td></tr>';
+        }
+                        
+        $html .= '</tbody></table></div>';
+        
+        return $html;
     }
     add_shortcode('statements', 'get_all_customer_orders');
