@@ -11,11 +11,10 @@
                 let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
                 
                 // This does the ajax request (The Call).
-                $('#wpforms-submit-12023').click(function() {
-                    let orderNum = $('#wpforms-12023-field_1').val();
-                    let orderStatus = $('#wpforms-12023-field_2').val();
-                    let orderDiscountCheck = $('#wpforms-12023-field_5_1').is(':checked');
-                    let orderDiscountFullAmountCheck = $('#wpforms-12023-field_5_2').is(':checked');
+                $('#wpforms-submit-11444').click(function() {
+                    let orderNum = $('#wpforms-11444-field_1').val();
+                    let orderStatus = $('#wpforms-11444-field_2').val();
+                    let orderDiscountCheck = $('#wpforms-11444-field_3_1').is(':checked');
                     
                     $.ajax({
                         url: ajaxurl, // Since WP 2.8 ajaxurl is always defined and points to admin-ajax.php
@@ -24,8 +23,7 @@
                             'action': 'change_order_status_ajax', // This is our PHP function below
                             'orderNum' : orderNum,
                             'orderStatus': orderStatus,
-                            'discountCheck': orderDiscountCheck,
-                            'fullAmount': orderDiscountFullAmountCheck
+                            'discountCheck': orderDiscountCheck
                         },
                         success: function(data) {
                             // This outputs the result of the ajax request (The Callback)
@@ -47,7 +45,6 @@
             $order_number = $_POST['orderNum'];
             $order_status = $_POST['orderStatus'];
             $order_discount_check = $_POST['discountCheck'];
-		    $order_full_amount = $_POST['fullAmount'];
             $order = wc_get_order($order_number);
             
             $text_response = "Order status changed to ";
@@ -62,7 +59,7 @@
                     echo $text_response . $order_status;
                     break;
                 case 'Completed':
-                    if ($order_discount_check == "true" && $order_full_amount == "false") {
+                    if ($order_discount_check == "true") {
                         $new_total = round(get_post_meta($order->get_id(), 'two_percent_early_pay', true), 2);
 					    $order->set_total(strval($new_total));
                     }

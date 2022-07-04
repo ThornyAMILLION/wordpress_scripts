@@ -83,23 +83,23 @@
     function my_wp_nav_menu_args($args = '') {
         if(is_user_logged_in()) {
             $user = wp_get_current_user(); // getting & setting the current user 
-             $roles = ( array ) $user->roles; // obtaining the role 
+            $roles = ( array ) $user->roles; // obtaining the role 
             
             // Logged in menu to display
             switch(strtoupper($roles[0])) {
                 case "ADMINISTRATOR":
-                    $args['menu'] = 17;
+                    $args['menu'] = 35;
                     break;
                 case "ACCOUNTANT":
-                    $args['menu'] = 37;
+                    $args['menu'] = 36;
                     break;
                 default:
-                    $args['menu'] = 38;
+                    $args['menu'] = 37;
                     break;
             }
         } else {
             // Non-logged-in menu to display
-            $args['menu'] = 18;
+            $args['menu'] = 38;
         }
         return $args;
     }
