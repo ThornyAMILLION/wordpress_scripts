@@ -165,7 +165,7 @@
 </table>
 
 <div class="bottom-spacer">
-    <p>NOTE: Eligiable for early pay only if paid within 10 days. 2% interest per month on all accounts over 30 days. 5% handling fee on all new returns. All goods to be returned must be in original package. Within 5 days of shipment all discrepancy must be reported.</p>
+    <p>NOTE: Eligible for early pay only if paid within 10 days. 2% interest per month on all accounts over 30 days. 5% handling fee on all new returns. All goods to be returned must be in original package. Within 5 days of shipment all discrepancy must be reported.</p>
 </div>
 
 <?php do_action( 'wpo_wcpdf_after_order_details', $this->get_type(), $this->order ); ?>

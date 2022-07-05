@@ -1,3 +1,5 @@
 B2bking changes to source code:
     - In b2bking/public/assets/js/public.js I comment out the add to cart button for cream and indigo bulk forms
     - In b2bking/public/class-b2bking-public.php I change the functionality of the function b2bking_handle_file_upload_override with modified code
+    - In b2bking/includes/class-b2bking.php I changed the default item display amount for bulk order form theme cream
+    - In b2bking/public/class-b2bking-public.php I change the bulk order form theme cream line item to no longer have a link

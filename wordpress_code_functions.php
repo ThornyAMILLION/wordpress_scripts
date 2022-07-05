@@ -193,3 +193,7 @@
         update_post_meta($order_id, 'two_percent_early_pay', $two_percent_total);
     }
     add_action('woocommerce_checkout_update_order_meta', 'new_order_2_percent_meta_data');
+
+    // Remove cart and mini cart product links
+    add_filter( 'woocommerce_cart_item_permalink', '__return_null' );
+    add_filter( 'woocommerce_mini_cart_item_name_permalink', '__return_null' );

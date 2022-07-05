@@ -263,7 +263,7 @@
                 }
     
                 if ($id !== 0 && !empty($id) && $part_inventory_valid == 'yes') {
-                    WC()->cart->add_to_cart( $id, $qty);
+                    WC()->cart->add_to_cart($id, $qty);
                 } else {
                     if ($linenumber !== 0){
                         array_push($failed_skus, $sku);
@@ -298,18 +298,42 @@
     
         foreach($customer_orders as $key => $id) {
             $order = wc_get_order($id->ID);
-            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total, 'item_count' => $order->get_item_count(), 'date_created' => $order->get_date_created()];
+            $date = date_create($order->get_date_created());
+            $date = date_format($date,"Y-m-d H:i:s");
+            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status()];
             array_push($orders_array, $order_info);
         }
         
-        $html = '<div><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody>';
-        
-        foreach($order_array as $key => $item) {
-            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created']->date . '</td><td>' . $item['subtotal'] . '</td><td>' . $item['tax'] . '</td><td>' . $item['total'] . '</td></tr>';
+        $html = '<div class="statements"><form id="statement_form"><input id="statement_start_date" type="date"><input id="statement_end_date" type="date"><select id="statement_order_status"><option value=""></option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+    
+        foreach($orders_array as $key => $item) {
+            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
         }
-                        
-        $html .= '</tbody></table></div>';
         
+        $html .= '</tbody></table></div>';
+    
         return $html;
     }
     add_shortcode('statements', 'get_all_customer_orders');
+
+    // Wordpress snippets - Pre-populate Woocommerce checkout fields
+    add_filter('woocommerce_checkout_get_value', function($input, $key ) {
+        global $current_user;
+        switch ($key) :
+            case 'billing_first_name':
+            case 'shipping_first_name':
+                return $current_user->first_name;
+            break;
+
+            case 'billing_last_name':
+            case 'shipping_last_name':
+                return $current_user->last_name;
+            break;
+            case 'billing_email':
+                return $current_user->user_email;
+            break;
+            case 'billing_phone':
+                return $current_user->phone;
+            break;
+        endswitch;
+    }, 10, 2);
