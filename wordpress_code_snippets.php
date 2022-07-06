@@ -132,7 +132,7 @@
     
                     let textinput = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_product');
                     var productID = 0;
-                    let product = $(this).parent().parent().find('.b2bking_bulkorder_indigo_name.b2bking_bulkorder_cream_name')[1];
+                    let product = $(this).parent().parent().find('.b2bking_bulkorder_indigo_name.b2bking_bulkorder_cream_name');
                     product = $(product).html();
                     if (product.split(' ')[2] == 'AFN') {
                         product = product.split(' ')[2] + product.split(' ')[0].slice(1);
@@ -303,8 +303,20 @@
             $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status()];
             array_push($orders_array, $order_info);
         }
+
+        if ($start_date !== '') {
+            $orders_array = array_filter($orders_array, function($order) use ($start_date) {
+                return $order['date_created'] > $start_date;
+            });
+        }
+    
+        if ($end_date !== '') {
+            $orders_array = array_filter($orders_array, function($order) use ($end_date) {
+                return $order['date_created'] < $end_date;
+            });
+        }
         
-        $html = '<div class="statements"><form id="statement_form"><input id="statement_start_date" type="date"><input id="statement_end_date" type="date"><select id="statement_order_status"><option value=""></option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+        $html = '<div class="statements"><form id="statement_form"><label htmlfor="statement_start_date">Start Date:</label><input id="statement_start_date" type="date" value="' . $start_date . '"><label htmlfor="statement_end_date">End Date:</label><input id="statement_end_date" type="date" value="' . $end_date . '"><label htmlfor="statement_order_status">Order Status:</label><select id="statement_order_status"><option value="">All</option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select><button id="statement_filter_button" type="button">Filter</button></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
     
         foreach($orders_array as $key => $item) {
             $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
@@ -337,3 +349,44 @@
             break;
         endswitch;
     }, 10, 2);
+
+    //Wordpress snippets - Statement Filter Function
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('#statement_filter_button').on('click', function() {
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
+                    let startDate = $('#statement_start_date').val();
+                    let endDate = $('#statement_end_date').val();
+                    let orderStatus = $('#statement_order_status').val();
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            'action': 'statement_filter_customer_orders',
+                            'startDate': startDate,
+                            'endDate': endDate,
+                            'orderStatus': orderStatus
+                        }, success: function(data) {
+                            data = JSON.parse(data);
+                            if (data.text == 'success') {
+                                let tableBody = $('.statement-table-body');
+                                tableBody.children().remove();
+                                let tableRows = data.orders.map((item) => {
+                                    return '<tr><td>' + item.id + '</td><td>' + item.date_created + '</td><td>' + item.status + '</td><td>$' + item.subtotal + '</td><td>$' + item.tax + '</td><td>$' + item.total + '</td></tr>';
+                                })
+                                tableBody.append(tableRows);
+                            } else {
+                                console.log('Fail: ', data);
+                            }
+                        }, error: function(error) {
+                            console.log('Something went wrong: ', error.responseText);
+                        }
+                    });
+                })
+            });
+        </script>
+        <?php
+    });
