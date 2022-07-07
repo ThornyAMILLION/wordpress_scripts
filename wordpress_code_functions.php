@@ -283,3 +283,86 @@
     // This bit is a special action hook that works with the WordPress AJAX functionality.
     add_action('wp_ajax_statement_filter_customer_orders', 'statement_filter_customer_orders');
     add_action('wp_ajax_nopriv_statement_filter_customer_orders', 'statement_filter_customer_orders'); 
+
+    // Wordpress snippets - Open new window to allow for users to print statement as pdf
+    function statement_info() {
+        if (isset($_POST)) {
+            $user = wp_get_current_user();
+            $roles = (array) $user->roles;
+            $start_date = $_POST['startDate'];
+            $end_date = $_POST['endDate'];
+            $order_status = $_POST['orderStatus'];
+            $user_statement = '';
+    
+            $customer_orders = [];
+            if ($roles[0] == 'administrator') {
+                $user_statement = $_POST['userStatement'];
+                $customer_orders = get_posts(array(
+                    'numberposts' => -1,
+                    'post_type'   => wc_get_order_types(),
+                    'post_status' => array_keys(wc_get_order_statuses()),
+                ));
+            } else {
+                $customer_orders = get_posts(array(
+                    'numberposts' => -1,
+                    'meta_key'    => '_customer_user',
+                    'meta_value'  => get_current_user_id(),
+                    'post_type'   => wc_get_order_types(),
+                    'post_status' => array_keys(wc_get_order_statuses()),
+                ));
+            }
+    
+            $orders_array = [];
+    
+            foreach($customer_orders as $key => $id) {
+                $order = wc_get_order($id->ID);
+                $date = date_create($order->get_date_created());
+                $date = date_format($date,"Y-m-d H:i:s");
+                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id()];
+                array_push($orders_array, $order_info);
+            }
+    
+            $start_date = new DateTime("first day of this month");
+            $end_date = new DateTime("last day of this month");
+    
+            $start_date = $start_date->format('Y-m-d');
+            $end_date = $end_date->format('Y-m-d');
+    
+            if ($start_date !== '') {
+                $orders_array = array_filter($orders_array, function($order) use ($start_date) {
+                    return $order['date_created'] > $start_date;
+                });
+            }
+    
+            if ($end_date !== '') {
+                $orders_array = array_filter($orders_array, function($order) use ($end_date) {
+                    return $order['date_created'] < $end_date;
+                });
+            }
+    
+            if ($order_status !== '') {
+                if ($order_status == 'Paid') {
+                    $orders_array = array_filter($orders_array, function($order) {
+                        return $order['status'] == 'completed' || $order['status'] == 'return-approved' || $order['status'] == 'return-requested';
+                    });
+                } else {
+                    $orders_array = array_filter($orders_array, function($order) {
+                        return $order['status'] != 'completed' && $order['status'] != 'return-approved' && $order['status'] != 'return-requested';
+                    });
+                }
+            }
+            
+            $orders_array = array_values($orders_array);
+                
+            if (empty($orders_array)) {
+                $data = 'fail: no orders match filters.';
+            } else {
+                $data = ['orders' => $orders_array, 'text' => 'success'];
+            }
+        }
+        echo json_encode($data);
+        die();
+    }
+    // This bit is a special action hook that works with the WordPress AJAX functionality.
+    add_action('wp_ajax_statement_info', 'statement_info');
+    add_action('wp_ajax_nopriv_statement_info', 'statement_info'); 

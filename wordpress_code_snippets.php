@@ -346,13 +346,13 @@
             $html .= '</select>';
         }
 
-        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><div id="statement-table"><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
     
         foreach($orders_array as $key => $item) {
             $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
         }
         
-        $html .= '</tbody></table></div>';
+        $html .= '</tbody></table></div><button id="statement_print_button" type="button">Print</button></div>';
     
         return $html;
     }
@@ -438,42 +438,52 @@
                     let startDate = $('#statement_start_date').val();
                     let endDate = $('#statement_end_date').val();
                     let orderStatus = $('#statement_order_status').val();
+                    let userStatement = '';
                     
+                    if ($('#statement_order_users').length > 0) {
+                        userStatement = $('#statement_order_users').val();
+                    }
+
                     $.ajax({
                         url: ajaxurl,
                         type: 'POST',
                         data: {
-                            'action': '',
+                            'action': 'statement_info',
                             'startDate': startDate,
                             'endDate': endDate,
-                            'orderStatus': orderStatus
-                        }, success: function(data) {
-                            data = JSON.parse(data);
-                            if (data.text == 'success') {
-                                console.log("create pdf")
-                            } else {
-                                console.log('Fail: ', data);
-                            }
-                        }, error: function(error) {
-                            console.log('Something went wrong: ', error.responseText);
+                            'orderStatus': orderStatus,
+                            'userStatement': userStatement
                         }
-                    }).then(data, function(orders) {
-                        if (orders.text == 'success') {
-                            $.ajax({
-                                url: ajaxurl,
-                                type: 'POST',
-                                data: {
-                                    'action': '',
-                                    'statement_orders': orders.orders
-                                }, success: function(data) {
-                                    
-                                }
-                            })
+                    }).then(function(data) {
+                        data = JSON.parse(data);
+                        if (data.text == 'success') {
+                            let header = '';
+                            let table = $('#statement-table').html();
+                            let footer = '';
+
+                            let printwin = window.open("");
+                            printwin.document.write(table); 
+                            printwin.stop();
+                            printwin.print();
+                            printwin.close();
                         } else {
-                            console.log('Statement orders not returned. |', orders);
+                            console.log('Fail: ', data);
                         }
+                    }).fail(function(error) {
+                        console.log('Something went wrong: ', error.responseText);
                     });
                 });
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress snippets - Disable billing details input fields
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                document.querySelectorAll('#customer_details .col-1 input, #customer_details .col-1 select, #customer_details .col-1 button, #customer_details .col-1 textarea').forEach(elem => elem.disabled = true);
             });
         </script>
         <?php
