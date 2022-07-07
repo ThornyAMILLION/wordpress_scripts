@@ -6,10 +6,10 @@
             jQuery(document).ready(function() {
                 // on click add to cart
                 $('.b2bking_bulkorder_form_container_bottom_add_button').on('click', function() {
-                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl				
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
                     let productString = '';
                     let product_arr = [];
-    
+
                     // loop through all bulk order form lines
                     document.querySelectorAll('.b2bking_bulkorder_form_container_content_line_product').forEach(function(textinput) {
                         var classList = $(textinput).attr('class').split(/\s+/);
@@ -25,53 +25,53 @@
                                 } else {
                                     product = product.split(' ')[0] + product.split(' ')[2];
                                 }
-                                
+
                                 product_arr.push([productID, product, quantity]);
                             }
                         });
                     });
-                    
+
                     $.ajax({
                         url: ajaxurl,
                         type: 'POST',
                         data: {
                             'action': 'b2bking_add_to_cart_check_inventory_ajax',
                             'products': product_arr
-                        }, success: function(data) {
-                            console.log(data)
-                            if (data == "success") {
-                                for (let i of product_arr) {
-                                    let productID = i[0];
-                                    let product = i[1];
-                                    let quantity = i[2];
-    
-                                    if (quantity > 0) {
-                                        // set product
-                                        productString += productID + ':' + quantity + '|';
-                                    }
-                                }
-                                
-                                // if not empty, send
-                                if (productString !== '' && productString !== undefined) {
-                                    // replace icon with loader
-                                    $('<img class="b2bking_loader_icon_button" src="'+b2bking_display_settings.loadertransparenturl+'">').insertBefore('.b2bking_bulkorder_form_container_bottom_add_button_icon');
-                                    $('.b2bking_bulkorder_form_container_bottom_add_button_icon').remove();
-                                    var datavar = {
-                                        action: 'b2bking_bulkorder_add_cart',
-                                        security: b2bking_display_settings.security,
-                                        productstring: productString,
-                                    };
-    
-                                    $.post(b2bking_display_settings.ajaxurl, datavar, function(response) {
-                                        window.location = b2bking_display_settings.carturl;
-                                    });
-                                }
-                            } else {
-                                console.log('Fail: One or more items does not have inventory |', data);
-                            }
-                        }, error: function(error) {
-                            console.log("Something went wrong: ", error.responseText);
                         }
+                    }).then(function(data) {
+                        if (data == "success") {
+                            for (let i of product_arr) {
+                                let productID = i[0];
+                                let product = i[1];
+                                let quantity = i[2];
+
+                                if (quantity > 0) {
+                                    // set product
+                                    productString += productID + ':' + quantity + '|';
+                                }
+                            }
+
+                            // if not empty, send
+                            if (productString !== '' && productString !== undefined) {
+                                // replace icon with loader
+                                $('<img class="b2bking_loader_icon_button" src="'+b2bking_display_settings.loadertransparenturl+'">').insertBefore('.b2bking_bulkorder_form_container_bottom_add_button_icon');
+                                $('.b2bking_bulkorder_form_container_bottom_add_button_icon').remove();
+                                var datavar = {
+                                    action: 'b2bking_bulkorder_add_cart',
+                                    security: b2bking_display_settings.security,
+                                    productstring: productString,
+                                };
+
+                                $.post(b2bking_display_settings.ajaxurl, datavar, function(response) {
+                                    window.location = b2bking_display_settings.carturl;
+                                });
+                            }
+                        } else {
+                            alert("One or more items does not have inventory | " + data);
+                            console.log('Fail: One or more items does not have inventory |', data);
+                        }
+                    }).fail(function(error) {
+                        console.log("Something went wrong: ", error.responseText);
                     });
                 });
             })
@@ -125,11 +125,11 @@
                 $('body').on('click', '.b2bking_bulkorder_indigo_add', function() {
                     let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
                     let product_arr = [];
-    
+
                     // loader icon
                     let thisbutton = $(this);
                     $(this).html('<img class="b2bking_loader_icon_button_indigo" src="'+b2bking_display_settings.loadertransparenturl+'">');
-    
+
                     let textinput = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_product');
                     var productID = 0;
                     let product = $(this).parent().parent().find('.b2bking_bulkorder_indigo_name.b2bking_bulkorder_cream_name');
@@ -147,46 +147,45 @@
                         }
                     });
                     let qty = $(this).parent().parent().find('.b2bking_bulkorder_form_container_content_line_qty').val();
-    
+
                     product_arr.push([productID, product, qty]);
-                    console.log(product_arr)
                     $.ajax({
                         url: ajaxurl,
                         type: 'POST',
                         data: {
                             'action': 'b2bking_add_to_cart_check_inventory_ajax',
                             'products': product_arr
-                        }, success: function(data) {
-                            if (data == 'success') {
-                                var datavar = {
-                                    action: 'b2bking_bulkorder_add_cart_item',
-                                    security: b2bking_display_settings.security,
-                                    productid: productID,
-                                    productqty: qty,
-                                };
-    
-                                $.post(b2bking_display_settings.ajaxurl, datavar, function(response) {
-                                    if (response === 'success') {
-                                        // set button to 'Add more'
-                                        $(thisbutton).html(b2bking_display_settings.add_more_indigo);
-                                        // Refresh cart fragments
-                                        $(document.body).trigger('wc_fragment_refresh');
-                                    }
-                                });
-                            } else {
-                                console.log('Fail: Product does not have inventory. | ', data);
-                                // set button to 'Add more'
-                                $(thisbutton).html("No Inventory");
-                                // Refresh cart fragments
-                                $(document.body).trigger('wc_fragment_refresh');
-                            }
-                        }, error: function(error) {
-                            console.log('Something went wrong: ', error.responseText);
+                        }
+                    }).then(function(data) {
+                        if (data == 'success') {
+                            var datavar = {
+                                action: 'b2bking_bulkorder_add_cart_item',
+                                security: b2bking_display_settings.security,
+                                productid: productID,
+                                productqty: qty,
+                            };
+
+                            $.post(b2bking_display_settings.ajaxurl, datavar, function(response) {
+                                if (response === 'success') {
+                                    // set button to 'Add more'
+                                    $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                                    // Refresh cart fragments
+                                    $(document.body).trigger('wc_fragment_refresh');
+                                }
+                            });
+                        } else {
+                            console.log('Fail: Product does not have inventory. | ', data);
                             // set button to 'Add more'
-                            $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                            $(thisbutton).html("No Inventory");
                             // Refresh cart fragments
                             $(document.body).trigger('wc_fragment_refresh');
                         }
+                    }).fail(function(error) {
+                        console.log('Something went wrong: ', error.responseText);
+                        // set button to 'Add more'
+                        $(thisbutton).html(b2bking_display_settings.add_more_indigo);
+                        // Refresh cart fragments
+                        $(document.body).trigger('wc_fragment_refresh');
                     });
                 });
             });
@@ -316,7 +315,7 @@
             });
         }
         
-        $html = '<div class="statements"><form id="statement_form"><label htmlfor="statement_start_date">Start Date:</label><input id="statement_start_date" type="date" value="' . $start_date . '"><label htmlfor="statement_end_date">End Date:</label><input id="statement_end_date" type="date" value="' . $end_date . '"><label htmlfor="statement_order_status">Order Status:</label><select id="statement_order_status"><option value="">All</option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select><button id="statement_filter_button" type="button">Filter</button></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+        $html = '<div class="statements"><form id="statement_form"><label htmlfor="statement_start_date">Start Date:</label><input id="statement_start_date" type="date" value="' . $start_date . '"><label htmlfor="statement_end_date">End Date:</label><input id="statement_end_date" type="date" value="' . $end_date . '"><label htmlfor="statement_order_status">Order Status:</label><select id="statement_order_status"><option value="">All</option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select><button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
     
         foreach($orders_array as $key => $item) {
             $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
@@ -345,7 +344,7 @@
                 return $current_user->user_email;
             break;
             case 'billing_phone':
-                return $current_user->phone;
+                return $current_user->billing_phone;
             break;
         endswitch;
     }, 10, 2);
@@ -369,23 +368,74 @@
                             'startDate': startDate,
                             'endDate': endDate,
                             'orderStatus': orderStatus
+                        }
+                    }).then(function(data) {
+                        data = JSON.parse(data);
+                        if (data.text == 'success') {
+                            let tableBody = $('.statement-table-body');
+                            tableBody.children().remove();
+                            let tableRows = data.orders.map((item) => {
+                                return '<tr><td>' + item.id + '</td><td>' + item.date_created + '</td><td>' + item.status + '</td><td>$' + item.subtotal + '</td><td>$' + item.tax + '</td><td>$' + item.total + '</td></tr>';
+                            })
+                            tableBody.append(tableRows);
+                        } else {
+                            console.log('Fail: ', data);
+                        }
+                    }).fail(function(error) {
+                        console.log('Something went wrong: ', error.responseText);
+                    });
+                })
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress snippets - Statement print function
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('#statement_print_button').on('click', function() {
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
+                    let startDate = $('#statement_start_date').val();
+                    let endDate = $('#statement_end_date').val();
+                    let orderStatus = $('#statement_order_status').val();
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            'action': '',
+                            'startDate': startDate,
+                            'endDate': endDate,
+                            'orderStatus': orderStatus
                         }, success: function(data) {
                             data = JSON.parse(data);
                             if (data.text == 'success') {
-                                let tableBody = $('.statement-table-body');
-                                tableBody.children().remove();
-                                let tableRows = data.orders.map((item) => {
-                                    return '<tr><td>' + item.id + '</td><td>' + item.date_created + '</td><td>' + item.status + '</td><td>$' + item.subtotal + '</td><td>$' + item.tax + '</td><td>$' + item.total + '</td></tr>';
-                                })
-                                tableBody.append(tableRows);
+                                console.log("create pdf")
                             } else {
                                 console.log('Fail: ', data);
                             }
                         }, error: function(error) {
                             console.log('Something went wrong: ', error.responseText);
                         }
+                    }).then(data, function(orders) {
+                        if (orders.text == 'success') {
+                            $.ajax({
+                                url: ajaxurl,
+                                type: 'POST',
+                                data: {
+                                    'action': '',
+                                    'statement_orders': orders.orders
+                                }, success: function(data) {
+                                    
+                                }
+                            })
+                        } else {
+                            console.log('Statement orders not returned. |', orders);
+                        }
                     });
-                })
+                });
             });
         </script>
         <?php

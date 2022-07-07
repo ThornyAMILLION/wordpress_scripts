@@ -7,15 +7,14 @@
         ?>
         <script>
             jQuery(document).ready(function($) {
-                
                 let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
-                
+    
                 // This does the ajax request (The Call).
                 $('#wpforms-submit-11444').click(function() {
                     let orderNum = $('#wpforms-11444-field_1').val();
                     let orderStatus = $('#wpforms-11444-field_2').val();
                     let orderDiscountCheck = $('#wpforms-11444-field_3_1').is(':checked');
-                    
+    
                     $.ajax({
                         url: ajaxurl, // Since WP 2.8 ajaxurl is always defined and points to admin-ajax.php
                         type: 'POST',
@@ -24,14 +23,12 @@
                             'orderNum' : orderNum,
                             'orderStatus': orderStatus,
                             'discountCheck': orderDiscountCheck
-                        },
-                        success: function(data) {
-                            // This outputs the result of the ajax request (The Callback)
-                            console.log(data);
-                        },
-                        error: function(errorThrown) {
-                            window.alert(errorThrown);
                         }
+                    }).then(function(data) {
+                        // This outputs the result of the ajax request (The Callback)
+                        console.log(data);
+                    }).fail(function(errorThrown) {
+                        window.alert(errorThrown);
                     });
                 });
             });
@@ -243,11 +240,11 @@
             if ($order_status !== '') {
                 if ($order_status == 'Paid') {
                     $orders_array = array_filter($orders_array, function($order) {
-                        return $order['status'] == 'completed';
+                        return $order['status'] == 'completed' || $order['status'] == 'return-approved' || $order['status'] == 'return-requested';
                     });
                 } else {
                     $orders_array = array_filter($orders_array, function($order) {
-                        return $order['status'] != 'completed';
+                        return $order['status'] != 'completed' && $order['status'] != 'return-approved' && $order['status'] != 'return-requested';
                     });
                 }
             }
