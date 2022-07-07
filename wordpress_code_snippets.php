@@ -285,16 +285,27 @@
     
     // Get all customer orders
     function get_all_customer_orders() {
-        $customer_orders = get_posts(array(
-            'numberposts' => -1,
-            'meta_key'    => '_customer_user',
-            'meta_value'  => get_current_user_id(),
-            'post_type'   => wc_get_order_types(),
-            'post_status' => array_keys(wc_get_order_statuses()),
-        ));
-    
+        $user = wp_get_current_user();
+        $roles = (array) $user->roles;
+
+        $customer_orders = [];
+        if ($roles[0] == 'administrator') {
+            $customer_orders = get_posts(array(
+                'numberposts' => -1,
+                'post_type'   => wc_get_order_types(),
+                'post_status' => array_keys(wc_get_order_statuses()),
+            ));
+        } else {
+            $customer_orders = get_posts(array(
+                'numberposts' => -1,
+                'meta_key'    => '_customer_user',
+                'meta_value'  => get_current_user_id(),
+                'post_type'   => wc_get_order_types(),
+                'post_status' => array_keys(wc_get_order_statuses()),
+            ));
+        }
+
         $orders_array = [];
-    
         foreach($customer_orders as $key => $id) {
             $order = wc_get_order($id->ID);
             $date = date_create($order->get_date_created());
@@ -302,6 +313,12 @@
             $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status()];
             array_push($orders_array, $order_info);
         }
+
+        $start_date = new DateTime("first day of this month");
+        $end_date = new DateTime("last day of this month");
+        
+        $start_date = $start_date->format('Y-m-d');
+        $end_date = $end_date->format('Y-m-d');
 
         if ($start_date !== '') {
             $orders_array = array_filter($orders_array, function($order) use ($start_date) {
@@ -315,7 +332,21 @@
             });
         }
         
-        $html = '<div class="statements"><form id="statement_form"><label htmlfor="statement_start_date">Start Date:</label><input id="statement_start_date" type="date" value="' . $start_date . '"><label htmlfor="statement_end_date">End Date:</label><input id="statement_end_date" type="date" value="' . $end_date . '"><label htmlfor="statement_order_status">Order Status:</label><select id="statement_order_status"><option value="">All</option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select><button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+        $html = '<div class="statements"><form id="statement_form"><label htmlfor="statement_start_date">Start Date:</label><input id="statement_start_date" type="date" value="' . $start_date . '"><label htmlfor="statement_end_date">End Date:</label><input id="statement_end_date" type="date" value="' . $end_date . '"><label htmlfor="statement_order_status">Order Status:</label><select id="statement_order_status"><option value="">All</option><option value="Paid">Paid</option><option value="Pending Payment">Pending Payment</option></select>';
+
+        if ($roles[0] == 'administrator') {
+            $users = get_users();
+            
+            $html .= '<label htmlfor="statement_order_users">Customers</label><select id="statement_order_users"><option value="">All</option>';
+            
+            foreach($users as $user) {
+                $html .= '<option value="' . esc_html($user->ID) . '">' . esc_html($user->display_name) . '</option>';
+            }
+
+            $html .= '</select>';
+        }
+
+        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><table class="statement-table"><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
     
         foreach($orders_array as $key => $item) {
             $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
@@ -359,6 +390,11 @@
                     let startDate = $('#statement_start_date').val();
                     let endDate = $('#statement_end_date').val();
                     let orderStatus = $('#statement_order_status').val();
+                    let userStatement = '';
+                    
+                    if ($('#statement_order_users').length > 0) {
+                        userStatement = $('#statement_order_users').val();
+                    }
                     
                     $.ajax({
                         url: ajaxurl,
@@ -367,7 +403,8 @@
                             'action': 'statement_filter_customer_orders',
                             'startDate': startDate,
                             'endDate': endDate,
-                            'orderStatus': orderStatus
+                            'orderStatus': orderStatus,
+                            'userStatement': userStatement
                         }
                     }).then(function(data) {
                         data = JSON.parse(data);
@@ -379,6 +416,7 @@
                             })
                             tableBody.append(tableRows);
                         } else {
+                            alert('Fail: ' + data);
                             console.log('Fail: ', data);
                         }
                     }).fail(function(error) {

@@ -197,17 +197,31 @@
 
     function statement_filter_customer_orders() {
         if (isset($_POST)) {
+            $user = wp_get_current_user();
+            $roles = (array) $user->roles;
             $start_date = $_POST['startDate'];
             $end_date = $_POST['endDate'];
             $order_status = $_POST['orderStatus'];
+            $user_statement = '';
             
-            $customer_orders = get_posts(array(
-                'numberposts' => -1,
-                'meta_key'    => '_customer_user',
-                'meta_value'  => get_current_user_id(),
-                'post_type'   => wc_get_order_types(),
-                'post_status' => array_keys(wc_get_order_statuses()),
-            ));
+
+            $customer_orders = [];
+            if ($roles[0] == 'administrator') {
+                $user_statement = $_POST['userStatement'];
+                $customer_orders = get_posts(array(
+                    'numberposts' => -1,
+                    'post_type'   => wc_get_order_types(),
+                    'post_status' => array_keys(wc_get_order_statuses()),
+                ));
+            } else {
+                $customer_orders = get_posts(array(
+                    'numberposts' => -1,
+                    'meta_key'    => '_customer_user',
+                    'meta_value'  => get_current_user_id(),
+                    'post_type'   => wc_get_order_types(),
+                    'post_status' => array_keys(wc_get_order_statuses()),
+                ));
+            }
             
             $orders_array = [];
             
@@ -215,7 +229,7 @@
                 $order = wc_get_order($id->ID);
                 $date = date_create($order->get_date_created());
                 $date = date_format($date,"Y-m-d H:i:s");
-                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status()];
+                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id()];
                 array_push($orders_array, $order_info);
             }
 
@@ -247,6 +261,12 @@
                         return $order['status'] != 'completed' && $order['status'] != 'return-approved' && $order['status'] != 'return-requested';
                     });
                 }
+            }
+
+            if ($user_statement !== '') {
+                $orders_array = array_filter($orders_array, function($order) use($user_statement) {
+                    return $order['user_id'] == $user_statement;
+                });
             }
 
             $orders_array = array_values($orders_array);
