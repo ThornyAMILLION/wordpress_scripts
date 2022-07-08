@@ -105,17 +105,6 @@
     }
     add_filter( 'wp_nav_menu_args', 'my_wp_nav_menu_args' );
 
-    // Wordpress snippet - b2bking bulk order product form 
-    add_filter('b2bking_bulkorder_indigo_search_name_display', function($name, $product) {
-        $name = $product->get_name() . " - " . $product->get_description();
-        return $name;
-    }, 10, 2);
-    
-    add_filter('b2bking_bulkorder_cream_search_name_display', function($name, $product) {
-        $name = $product->get_name() . " - " . $product->get_description();
-        return $name;
-    }, 10, 2);
-
     // Wordpress snippets - Product catalogue inventory check
     add_action('wp_footer', function() {
         ?>
@@ -283,7 +272,7 @@
         }
     }  
     
-    // Get all customer orders
+    // Wordpress snippets - Get all of current customer orders
     function get_all_customer_orders() {
         $user = wp_get_current_user();
         $roles = (array) $user->roles;
@@ -309,8 +298,16 @@
         foreach($customer_orders as $key => $id) {
             $order = wc_get_order($id->ID);
             $date = date_create($order->get_date_created());
-            $date = date_format($date,"Y-m-d H:i:s");
-            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status()];
+            $date2 = date_format($date, "F");
+            $date = date_format($date, "Y-m-d H:i:s");
+            
+            if (get_post_meta($order->get_id(), 'statement_month', true) == '') {
+                update_post_meta($order->get_id(), 'statement_month', $date2);
+            } else {
+                $date2 = get_post_meta($order->get_id(), 'statement_month', true);
+            }
+
+            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'statement_month' => $date2];
             array_push($orders_array, $order_info);
         }
 
@@ -346,10 +343,10 @@
             $html .= '</select>';
         }
 
-        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><div id="statement-table"><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><div id="statement-table"><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Statement Month</th></tr></thead><tbody class="statement-table-body">';
     
         foreach($orders_array as $key => $item) {
-            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
+            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>' . $item['statement_month'] . '</td></tr>';
         }
         
         $html .= '</tbody></table></div><button id="statement_print_button" type="button">Print</button></div>';
@@ -359,25 +356,38 @@
     add_shortcode('statements', 'get_all_customer_orders');
 
     // Wordpress snippets - Pre-populate Woocommerce checkout fields
-    add_filter('woocommerce_checkout_get_value', function($input, $key ) {
-        global $current_user;
-        switch ($key) :
+    add_filter('woocommerce_checkout_get_value', function($input, $key) {
+        $current_user = wp_get_current_user();
+        $current_user_id = get_current_user_id();
+
+        switch ($key) {
             case 'billing_first_name':
             case 'shipping_first_name':
                 return $current_user->first_name;
-            break;
-
+                break;
             case 'billing_last_name':
             case 'shipping_last_name':
                 return $current_user->last_name;
-            break;
+                break;
             case 'billing_email':
+            case 'shipping_email':
                 return $current_user->user_email;
-            break;
+                break;
             case 'billing_phone':
-                return $current_user->billing_phone;
-            break;
-        endswitch;
+                return get_user_meta($current_user_id, 'billing_phone', true);
+                break;
+            case 'billing_address_1':
+                return get_user_meta($current_user_id, 'billing_address_1', true);
+                break;
+            case 'billing_city':
+                return get_user_meta($current_user_id, 'billing_city', true);
+                break;
+            case 'billing_postcode':
+                return get_user_meta($current_user_id, 'billing_postcode', true);
+                break;
+            default:
+                break;
+        }
     }, 10, 2);
 
     //Wordpress snippets - Statement Filter Function
@@ -412,7 +422,7 @@
                             let tableBody = $('.statement-table-body');
                             tableBody.children().remove();
                             let tableRows = data.orders.map((item) => {
-                                return '<tr><td>' + item.id + '</td><td>' + item.date_created + '</td><td>' + item.status + '</td><td>$' + item.subtotal + '</td><td>$' + item.tax + '</td><td>$' + item.total + '</td></tr>';
+                                return '<tr><td>' + item.id + '</td><td>' + item.date_created + '</td><td>' + item.status + '</td><td>$' + item.subtotal + '</td><td>$' + item.tax + '</td><td>$' + item.total + '</td><td>' + item['statement_month'] + '</td></tr>';
                             })
                             tableBody.append(tableRows);
                         } else {
@@ -478,13 +488,43 @@
         <?php
     });
 
-    // Wordpress snippets - Disable billing details input fields
-    add_action('wp_footer', function() {
-        ?>
-        <script>
-            jQuery(document).ready(function() {
-                document.querySelectorAll('#customer_details .col-1 input, #customer_details .col-1 select, #customer_details .col-1 button, #customer_details .col-1 textarea').forEach(elem => elem.disabled = true);
-            });
-        </script>
-        <?php
-    });
+    // Wordpress snippets - Make billing details input fields read only
+    add_action('woocommerce_checkout_fields','customization_readonly_billing_fields', 10, 1);
+    function customization_readonly_billing_fields($checkout_fields) {
+        foreach ($checkout_fields['billing'] as $key => $field) {
+            $checkout_fields['billing'][$key]['custom_attributes'] = array('readonly'=>'readonly');
+        }
+        return $checkout_fields;
+    }
+
+    // Wordpress snippets - Show users recents orders
+    function get_customer_recent_orders() {
+        $customer_orders = get_posts(array(
+            'numberposts' => 3,
+            'meta_key'    => '_customer_user',
+            'meta_value'  => get_current_user_id(),
+            'post_type'   => wc_get_order_types(),
+            'post_status' => array_keys(wc_get_order_statuses()),
+        ));
+        
+
+        $orders_array = [];
+        foreach($customer_orders as $key => $id) {
+            $order = wc_get_order($id->ID);
+            $date = date_create($order->get_date_created());
+            $date = date_format($date,"Y-m-d H:i:s");
+            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status()];
+            array_push($orders_array, $order_info);
+        }
+
+        $html = '<div class="statements"><div id="statement-table"><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+
+        foreach($orders_array as $key => $item) {
+            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
+        }
+
+        $html .= '</tbody></table></div></div>';
+
+        return $html;
+    }
+    add_shortcode('recent_orders', 'get_customer_recent_orders');

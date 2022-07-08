@@ -169,27 +169,34 @@
     add_action('template_redirect', 'my_redirect_if_user_not_logged_in');
 
     // Add custom field to orders to show 2 percent early pay
-    function new_order_2_percent_meta_data($order_id) {
+    function new_order_meta_data($order_id) {
         $order = wc_get_order($order_id);
-        $tax_total = $order->get_total_tax();
-        
-        // Calculate subtotal excluding items that do not have 2% discount
-        $prices_to_discount = 0;
-        $prices_to_add = 0;
-        foreach ($order->get_items() as $item) {
-            $product = wc_get_product($item->get_product_id());
-            $temp_item = $product->get_sku();
-            if (!stristr($temp_item, 'AFN')) {
-                $prices_to_discount += number_format($item->get_total());
-            } else {
-                $prices_to_add += number_format($item->get_total());
+        if ($order->get_payment_method() != 'cod') {
+            $tax_total = $order->get_total_tax();
+    
+            // Calculate subtotal excluding items that do not have 2% discount
+            $prices_to_discount = 0;
+            $prices_to_add = 0;
+            foreach ($order->get_items() as $item) {
+                $product = wc_get_product($item->get_product_id());
+                $temp_item = $product->get_sku();
+                if (!stristr($temp_item, 'AFN')) {
+                    $prices_to_discount += number_format($item->get_total());
+                } else {
+                    $prices_to_add += number_format($item->get_total());
+                }
             }
+    
+            $two_percent_total = ($prices_to_discount * 0.98) + $prices_to_add + $tax_total;
+            update_post_meta($order_id, 'two_percent_early_pay', $two_percent_total);
+        } else {
+            update_post_meta($order_id, 'two_percent_early_pay', $order->get_total());
         }
-        
-        $two_percent_total = ($prices_to_discount * 0.98) + $prices_to_add + $tax_total;
-        update_post_meta($order_id, 'two_percent_early_pay', $two_percent_total);
+        $date = date_create($order->get_date_created());
+        $date = date_format($date, "F");
+        update_post_meta($order_id, 'statement_month', $date);
     }
-    add_action('woocommerce_checkout_update_order_meta', 'new_order_2_percent_meta_data');
+    add_action('woocommerce_checkout_update_order_meta', 'new_order_meta_data');
 
     // Remove cart and mini cart product links
     add_filter( 'woocommerce_cart_item_permalink', '__return_null' );
@@ -204,7 +211,6 @@
             $order_status = $_POST['orderStatus'];
             $user_statement = '';
             
-
             $customer_orders = [];
             if ($roles[0] == 'administrator') {
                 $user_statement = $_POST['userStatement'];
@@ -224,14 +230,21 @@
             }
             
             $orders_array = [];
-            
             foreach($customer_orders as $key => $id) {
-                $order = wc_get_order($id->ID);
-                $date = date_create($order->get_date_created());
-                $date = date_format($date,"Y-m-d H:i:s");
-                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id()];
-                array_push($orders_array, $order_info);
+            $order = wc_get_order($id->ID);
+            $date = date_create($order->get_date_created());
+            $date2 = date_format($date, "F");
+            $date = date_format($date, "Y-m-d H:i:s");
+            
+            if (get_post_meta($order->get_id(), 'statement_month', true) == '') {
+                update_post_meta($order->get_id(), 'statement_month', $date2);
+            } else {
+                $date2 = get_post_meta($order->get_id(), 'statement_month', true);
             }
+
+            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id(), 'statement_month' => $date2];
+            array_push($orders_array, $order_info);
+        }
 
             $start_date = new DateTime("first day of this month");
             $end_date = new DateTime("last day of this month");
@@ -366,3 +379,14 @@
     // This bit is a special action hook that works with the WordPress AJAX functionality.
     add_action('wp_ajax_statement_info', 'statement_info');
     add_action('wp_ajax_nopriv_statement_info', 'statement_info'); 
+
+    // B2bking bulk order cream product description
+    add_filter('b2bking_bulkorder_indigo_search_name_display', function($name, $product) {
+        $name = $product->get_name() . " - " . $product->get_description();
+        return $name;
+    }, 10, 2);
+    
+    add_filter('b2bking_bulkorder_cream_search_name_display', function($name, $product) {
+        $name = $product->get_name() . " - " . $product->get_description();
+        return $name;
+    }, 10, 2);
