@@ -43,7 +43,6 @@
                         if (data == "success") {
                             for (let i of product_arr) {
                                 let productID = i[0];
-                                let product = i[1];
                                 let quantity = i[2];
 
                                 if (quantity > 0) {
@@ -127,7 +126,7 @@
                     if (product.split(' ')[2] == 'AFN') {
                         product = product.split(' ')[2] + product.split(' ')[0].slice(1);
                     } else {
-                        product = product.split(' ')[0] + product.split(' ')[2];
+                        product = product.split(' ')[0];
                     }
                     var classList = $(textinput).attr('class').split(/\s+/);
                     $.each(classList, function(index, item) {
@@ -255,7 +254,8 @@
                 if ($id !== 0 && !empty($id) && $part_inventory_valid == 'yes') {
                     WC()->cart->add_to_cart($id, $qty);
                 } else {
-                    if ($linenumber !== 0){
+                    if ($linenumber !== 0) {
+                        WC()->cart->add_to_cart($id, $qty);
                         array_push($failed_skus, $sku);
                     }
                 }
@@ -538,7 +538,7 @@
     add_action('wp_footer', function() {
         ?>
         <script>
-            jQuery(document).ready(function() {
+            function check_quantity_of_cart_items() {
                 let products = $('.shop_table.cart .cart_item'); 
                 if (products.length > 0) {
                     let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
@@ -564,12 +564,56 @@
                             console.log(data)
                         } else {
                             console.log('Fail:', data.text);
+                            for (let item of data.data) {
+                                let product_variation = item[0].slice((item[0].length - 3));
+                                let product = item[0].slice(0, (item[0].length - 3));
+                                product = product + " - " + product_variation;
+                                
+                                let elem = $(".product-name").filter(function() {
+                                    return $(this).text().trim() == product;
+                                });
+                                
+                                elem.parent().children().css({
+                                    'cssText': 'background-color: yellow !important'
+                                });
+                            }
+                            
+                            $('.checkout-button').css({
+                                'cssText': 'pointer-events: none'
+                            })
                         }
                     }).fail(function(error) {
                         console.log('Something went wrong: ', error);
                     })
                 }
-            })
+            }
+            
+            jQuery(document).ready(function() {
+                check_quantity_of_cart_items();
+            });
         </script>
         <?php
     });
+
+    // Wordpress snippets - Check user input change
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {//setup before functions
+                var typingTimer;                //timer identifier
+                var doneTypingInterval = 500;  //time in ms, 5 seconds for example
+    
+                //on keyup, start the countdown
+                $('.shop_table.cart').keyup(function(){
+                    clearTimeout(typingTimer);
+                    typingTimer = setTimeout(doneTyping, doneTypingInterval);
+                });
+    
+                //user is "finished typing", do something
+                function doneTyping() {
+                    check_quantity_of_cart_items();
+                }
+            })
+        </script>
+        <?php
+    });		
