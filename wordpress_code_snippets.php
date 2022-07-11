@@ -39,6 +39,7 @@
                             'products': product_arr
                         }
                     }).then(function(data) {
+                        data = JSON.parse(data);
                         if (data == "success") {
                             for (let i of product_arr) {
                                 let productID = i[0];
@@ -67,8 +68,8 @@
                                 });
                             }
                         } else {
-                            alert("One or more items does not have inventory | " + data);
-                            console.log('Fail: One or more items does not have inventory |', data);
+                            alert("One or more items does not have inventory | " + data.text);
+                            console.log('Fail: One or more items does not have inventory |', data.text);
                         }
                     }).fail(function(error) {
                         console.log("Something went wrong: ", error.responseText);
@@ -146,6 +147,7 @@
                             'products': product_arr
                         }
                     }).then(function(data) {
+                        data = JSON.parse(data);
                         if (data == 'success') {
                             var datavar = {
                                 action: 'b2bking_bulkorder_add_cart_item',
@@ -163,7 +165,7 @@
                                 }
                             });
                         } else {
-                            console.log('Fail: Product does not have inventory. | ', data);
+                            console.log('Fail: Product does not have inventory. | ', data.text);
                             // set button to 'Add more'
                             $(thisbutton).html("No Inventory");
                             // Refresh cart fragments
@@ -528,3 +530,46 @@
         return $html;
     }
     add_shortcode('recent_orders', 'get_customer_recent_orders');
+
+    // Wordpress snippets - Hide mini-cart dropdown
+    add_filter( 'woocommerce_widget_cart_is_hidden', '__return_true' );
+
+    // Wordpress snippets - Check quantity of cart items
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                let products = $('.shop_table.cart .cart_item'); 
+                if (products.length > 0) {
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
+                    
+                    let productsArray = []; 
+                    for (let i of products) {
+                        let displayName = $(i).find('.product-name')[0].innerText;
+                        displayName = displayName.split(' ')[0] + displayName.split(' ')[2];	
+                        let productQty = Number($(i).find('.qty').val());
+                        productsArray.push(['', displayName.trim(), productQty]);
+                    }
+                    
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            'action': 'b2bking_add_to_cart_check_inventory_ajax',
+                            'products': productsArray
+                        }
+                    }).then(function(data) {
+                        data = JSON.parse(data);
+                        if (data == 'success') {
+                            console.log(data)
+                        } else {
+                            console.log('Fail:', data.text);
+                        }
+                    }).fail(function(error) {
+                        console.log('Something went wrong: ', error);
+                    })
+                }
+            })
+        </script>
+        <?php
+    });

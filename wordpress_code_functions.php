@@ -127,31 +127,29 @@
             $url = 'http://70.25.52.182:33333/?token=uULQwr6GNmNQSbbGefmN9qOUwvJ96OYy&check=';
             $products_len = count($products);
             $count = 0;
-            $no_inventory = '';
-            
+            $no_inventory = [];
+    
             foreach($products as $product) {
                 $response = wp_remote_get($url . $product[1]);
                 $response = $response['body'];
                 $response = json_decode($response);
-                
-                $count_previous_value = $count;			
+    
                 foreach($response->int as $part) {
                     if ($part->{'s'} == $product[1] && $product[2] < $part->{'q'}) {
                         $count += 1;
+                    } else if ($part->{'s'} == $product[1] && $product[2] > $part->{'q'}) {
+                        array_push($no_inventory, array($product[1], $part->{'q'}));
                     }
                 }
-                
-                if ($count_previous_value == $count) {
-                    $no_inventory .= $product[1] . '|';
-                }
-                
             }
             
             if ($count == $products_len) {
-                echo "success";
+                $data = "success";
             } else {
-                echo "fail: count - " . $count . ' products - ' . $products_len . ' | ' . $no_inventory;
+                $data = ['data' => $no_inventory, 'text' => "Count - " . $count . ' products - ' . $products_len];
             }
+            
+            echo json_encode($data);
         }
         die();
     }
@@ -382,11 +380,11 @@
 
     // B2bking bulk order cream product description
     add_filter('b2bking_bulkorder_indigo_search_name_display', function($name, $product) {
-        $name = $product->get_name() . " - " . $product->get_description();
+        $name = $product->get_name() . " | " . $product->get_sku() . " - " . $product->get_description();
         return $name;
     }, 10, 2);
     
     add_filter('b2bking_bulkorder_cream_search_name_display', function($name, $product) {
-        $name = $product->get_name() . " - " . $product->get_description();
+        $name = $product->get_name() . " | " . $product->get_sku() . " - " . $product->get_description();
         return $name;
     }, 10, 2);
