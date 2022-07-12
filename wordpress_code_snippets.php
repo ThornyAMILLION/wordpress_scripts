@@ -167,6 +167,7 @@
                             console.log('Fail: Product does not have inventory. | ', data.text);
                             // set button to 'Add more'
                             $(thisbutton).html("No Inventory");
+                            $(thisbutton).prop('disabled', true);
                             // Refresh cart fragments
                             $(document.body).trigger('wc_fragment_refresh');
                         }
@@ -299,6 +300,7 @@
         $orders_array = [];
         foreach($customer_orders as $key => $id) {
             $order = wc_get_order($id->ID);
+            $order_user = $order->get_user();
             $date = date_create($order->get_date_created());
             $date2 = date_format($date, "F");
             $date = date_format($date, "Y-m-d H:i:s");
@@ -309,7 +311,7 @@
                 $date2 = get_post_meta($order->get_id(), 'statement_month', true);
             }
 
-            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'statement_month' => $date2];
+            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'statement_month' => $date2, 'user' => $order_user->display_name];
             array_push($orders_array, $order_info);
         }
 
@@ -345,10 +347,19 @@
             $html .= '</select>';
         }
 
-        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><div id="statement-table"><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Statement Month</th></tr></thead><tbody class="statement-table-body">';
+        $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><div id="statement-table"><table><thead><tr><th>Order ID</th><th>User</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Statement Month</th></tr></thead><tbody class="statement-table-body">';
     
         foreach($orders_array as $key => $item) {
-            $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>' . $item['statement_month'] . '</td></tr>';
+            $html .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>';
+		
+            if ($roles[0] == 'administrator') {
+                $next_month = date('F', strtotime($item['statement_month'] . '+1 month'));
+                $html .= '<select class="statement-select-month"><option value="' . $item['statement_month'] . '">' . $item['statement_month'] . '</option><option value="' . $next_month . '">' . $next_month . '</option></select>';
+            } else {
+                $html .= $item['statement_month'];
+            }
+            
+            $html .= '</td></tr>';
         }
         
         $html .= '</tbody></table></div><button id="statement_print_button" type="button">Print</button></div>';
@@ -423,13 +434,10 @@
                         if (data.text == 'success') {
                             let tableBody = $('.statement-table-body');
                             tableBody.children().remove();
-                            let tableRows = data.orders.map((item) => {
-                                return '<tr><td>' + item.id + '</td><td>' + item.date_created + '</td><td>' + item.status + '</td><td>$' + item.subtotal + '</td><td>$' + item.tax + '</td><td>$' + item.total + '</td><td>' + item['statement_month'] + '</td></tr>';
-                            })
-                            tableBody.append(tableRows);
+                            tableBody.append(data.rows);
                         } else {
                             alert('Fail: ' + data);
-                            console.log('Fail: ', data);
+                            console.log('Fail:' + data);
                         }
                     }).fail(function(error) {
                         console.log('Something went wrong: ', error.responseText);
@@ -617,3 +625,40 @@
         </script>
         <?php
     });		
+
+    // Wordpress snippets - Change order statement month
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                // add to cart button
+                $('.statement-select-month').on('change', function() {
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
+                    let month = $(this).val();
+                    let orderId = $(this).parent().parent().find('.statement-order-id')[0].innerText;
+				
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            'action': 'change_statement_month',
+                            'month': month,
+                            'orderId': orderId
+                        }
+                    }).then(function(data) {
+                        data = JSON.parse(data);
+                        if (data == 'success') {
+                            alert('Statement Month changed');
+                            console.log('statement month changed');
+                        } else {
+                            alert('Fail:' + data);
+                            console.log("Fail: " + data);
+                        } 
+                    }).fail(function(error) {
+                        console.log("Something went wrong: " + error.responseText);
+                    })
+                });
+            });
+        </script>
+        <?php
+    });

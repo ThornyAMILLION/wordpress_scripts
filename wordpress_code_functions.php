@@ -229,20 +229,21 @@
             
             $orders_array = [];
             foreach($customer_orders as $key => $id) {
-            $order = wc_get_order($id->ID);
-            $date = date_create($order->get_date_created());
-            $date2 = date_format($date, "F");
-            $date = date_format($date, "Y-m-d H:i:s");
-            
-            if (get_post_meta($order->get_id(), 'statement_month', true) == '') {
-                update_post_meta($order->get_id(), 'statement_month', $date2);
-            } else {
-                $date2 = get_post_meta($order->get_id(), 'statement_month', true);
-            }
+                $order = wc_get_order($id->ID);
+                $order_user = $order->get_user();
+                $date = date_create($order->get_date_created());
+                $date2 = date_format($date, "F");
+                $date = date_format($date, "Y-m-d H:i:s");
+                
+                if (get_post_meta($order->get_id(), 'statement_month', true) == '') {
+                    update_post_meta($order->get_id(), 'statement_month', $date2);
+                } else {
+                    $date2 = get_post_meta($order->get_id(), 'statement_month', true);
+                }
 
-            $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id(), 'statement_month' => $date2];
-            array_push($orders_array, $order_info);
-        }
+                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'item_count' => $order->get_item_count(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id(), 'statement_month' => $date2, 'user' => $order_user->display_name];
+                array_push($orders_array, $order_info);
+            }
 
             $start_date = new DateTime("first day of this month");
             $end_date = new DateTime("last day of this month");
@@ -281,11 +282,24 @@
             }
 
             $orders_array = array_values($orders_array);
+            $html = '';
+            foreach($orders_array as $key => $item) {
+                $html .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>';
             
+                if ($roles[0] == 'administrator') {
+                    $next_month = date('F', strtotime($item['statement_month'] . '+1 month'));
+                    $html .= '<select class="statement-select-month"><option value="' . $item['statement_month'] . '">' . $item['statement_month'] . '</option><option value="' . $next_month . '">' . $next_month . '</option></select>';
+                } else {
+                    $html .= $item['statement_month'];
+                }
+                
+                $html .= '</td></tr>';
+            }
+
             if (empty($orders_array)) {
                 $data = 'fail: no orders match filters.';
             } else {
-                $data = ['orders' => $orders_array, 'text' => 'success'];
+                $data = ['text' => 'success', 'rows' => $html];
             }
         }
         echo json_encode($data);
@@ -327,9 +341,10 @@
     
             foreach($customer_orders as $key => $id) {
                 $order = wc_get_order($id->ID);
+                $order_user = $order->get_user();
                 $date = date_create($order->get_date_created());
                 $date = date_format($date,"Y-m-d H:i:s");
-                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id()];
+                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id(), 'user' => $order_user->display_name];
                 array_push($orders_array, $order_info);
             }
     
@@ -388,3 +403,18 @@
         $name = $product->get_name() . " | " . $product->get_sku() . " - " . $product->get_description();
         return $name;
     }, 10, 2);
+
+    function change_statement_month() {
+        if (isset($_POST)) {
+            $order_id = $_POST['orderId'];
+            $month = $_POST['month'];
+
+            update_post_meta($order_id, 'statement_month', $month);
+            
+            echo json_encode('success');
+        }
+        die();
+    }
+    // This bit is a special action hook that works with the WordPress AJAX functionality.
+    add_action('wp_ajax_change_statement_month', 'change_statement_month');
+    add_action('wp_ajax_nopriv_change_statement_month', 'change_statement_month'); 
