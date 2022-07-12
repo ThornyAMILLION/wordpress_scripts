@@ -404,6 +404,7 @@
         return $name;
     }, 10, 2);
 
+    // Change the order statement month meta value
     function change_statement_month() {
         if (isset($_POST)) {
             $order_id = $_POST['orderId'];
@@ -418,3 +419,36 @@
     // This bit is a special action hook that works with the WordPress AJAX functionality.
     add_action('wp_ajax_change_statement_month', 'change_statement_month');
     add_action('wp_ajax_nopriv_change_statement_month', 'change_statement_month'); 
+
+    // Get product inventory and display in bulk order form
+    function get_product_inventory() {
+        if (isset($_POST)) {
+            $url = 'http://70.25.52.182:33333/?token=uULQwr6GNmNQSbbGefmN9qOUwvJ96OYy&check='; 
+            $product = $_POST['product'];
+            $inventory = '';
+
+            $response = wp_remote_get($url . $product);
+            $response = $response['body'];
+            $response = json_decode($response);
+
+            foreach($response->int as $products) {
+                if ($product == $products->{'s'} && $products->{'q'} < 10) {
+                    $inventory = $products->{'q'};
+                } else if ($product == $products->{'s'} && $products->{'q'} > 10) {
+                    $inventory = '10+';
+                }
+            }  
+
+            if ($inventory != '') {
+                $data = ['inventory' => $inventory, 'text' => 'success'];
+            } else {
+                $data = 'item not found';
+            }
+
+            echo json_encode($data);
+        }
+        die();
+    }
+    // This bit is a special action hook that works with the WordPress AJAX functionality.
+    add_action('wp_ajax_get_product_inventory', 'get_product_inventory');
+    add_action('wp_ajax_nopriv_get_product_inventory', 'get_product_inventory'); 

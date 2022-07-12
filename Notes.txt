@@ -3,4 +3,5 @@ B2bking changes to source code:
     - In b2bking/public/class-b2bking-public.php I change the functionality of the function b2bking_handle_file_upload_override with modified code
     - In b2bking/includes/class-b2bking.php I changed the default item display amount for bulk order form theme cream
     - In b2bking/includes/class-b2bking.php I changed the default message at the bottom of bulk order form theme cream by removing "You’ve seen all the products"
-    - In b2bking/public/class-b2bking-public.php I change the bulk order form theme cream line item to no longer have a link
+    - In b2bking/public/class-b2bking-public.php I changed the bulk order form theme cream line item to no longer have a link
+    - In b2bking/public/class-b2bking-public.php I added new column to bulk order form in function b2bking_bulkorder_shortcode_content

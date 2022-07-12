@@ -183,97 +183,6 @@
         </script>
         <?php
     });
-
-    // Wordpress snippets - Override B2bking_Public class function for csv upload
-    function b2bking_handle_file_upload_override() {
-        // Stop immediately if form is not submitted
-        if (!isset($_POST['b2bking_submit_csvorder'])) {
-            return;
-        }
-    
-        $error = 'no';
-    
-        // Throws a message if no file is selected
-        if (!$_FILES['b2bking_csvorder']['name']) {
-            wc_add_notice(esc_html__('Please choose a file', 'b2bking'), 'error');
-            $error = 'yes';
-        }
-    
-        // Check for valid file extension
-        $allowed_extensions = array( 'csv');
-        $tmp = explode('.', $_FILES['b2bking_csvorder']['name']);
-        if(!in_array(end($tmp), $allowed_extensions)) {
-            wc_add_notice(sprintf(esc_html__('Invalid file extension, only allowed: %s', 'b2bking'), implode(', ', $allowed_extensions)), 'error');
-            $error = 'yes';
-        }
-    
-        $file_size = $_FILES['b2bking_csvorder']['size'];
-        $allowed_file_size = 5512000; // Here we are setting the file size limit to 5.5MB
-    
-        // Check for file size limit
-        if ($file_size >= $allowed_file_size) {
-            wc_add_notice( sprintf(esc_html__('File size limit exceeded, file size should be smaller than %d KB', 'b2bking'), $allowed_file_size / 1000), 'error');
-            $error = 'yes';
-    
-        }
-    
-        if ($error !== 'no') {
-            wc_add_notice(esc_html__('Sorry, there was an error with your file upload.', 'b2bking'), 'error');
-        } else {
-            wc_add_notice(esc_html__('Upload successful', 'b2bking'), 'success');
-    
-            // process upload to add to cart
-            $csv = array_map('str_getcsv', file($_FILES['b2bking_csvorder']['tmp_name'], FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES));
-    
-            $failed_skus = array();
-    
-            $linenumber = 0;
-            $url = 'http://70.25.52.182:33333/?token=uULQwr6GNmNQSbbGefmN9qOUwvJ96OYy&check=';
-            foreach($csv as $line) {
-                $lineelementsarray = explode(';',$line[0]);
-    
-                if (isset($lineelementsarray[1])){
-                    $sku = $lineelementsarray[0];
-                    $qty = $lineelementsarray[1];
-                } else {
-                    $sku = $line[0];
-                    $qty = $line[1];
-                }
-                $id = wc_get_product_id_by_sku($sku);
-                
-                $response = wp_remote_get($url . $sku);
-                $response = $response['body'];
-                $response = json_decode($response);
-                $part_inventory_valid = 'no';
-                
-                foreach($response->int as $part) {
-                    if ($part->{'s'} == $sku && $qty < $part->{'q'}) {
-                        $part_inventory_valid = 'yes';
-                    }
-                }
-    
-                if ($id !== 0 && !empty($id) && $part_inventory_valid == 'yes') {
-                    WC()->cart->add_to_cart($id, $qty);
-                } else {
-                    if ($linenumber !== 0) {
-                        WC()->cart->add_to_cart($id, $qty);
-                        array_push($failed_skus, $sku);
-                    }
-                }
-    
-                $linenumber++;
-            }
-    
-            if (!empty($failed_skus)){
-                $skus_string = '';
-                foreach ($failed_skus as $sku){
-                    $skus_string .= $sku.', ';
-                }
-                $skus_string = substr($skus_string, 0, -2);
-                wc_add_notice( esc_html__( 'We could not match any products with the following SKUs: ', 'b2bking' ).$skus_string, 'error' );
-            }
-        }
-    }  
     
     // Wordpress snippets - Get all of current customer orders
     function get_all_customer_orders() {
@@ -657,6 +566,55 @@
                     }).fail(function(error) {
                         console.log("Something went wrong: " + error.responseText);
                     })
+                });
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress Snippets - Show inventory of selected product
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('.b2bking_bulkorder_form_container_content_line_livesearch').on('click', 'div.b2bking_livesearch_product_result', function() {
+                    let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
+                    let thisSearchResult = $(this)[0];
+                    let product_display = $(this)[0].innerText;
+                    product = product_display.split(' ');
+                    product = product[3].replace(/\(|\)/g, ""); 
+
+                    $.ajax({
+                        url: ajaxurl,
+                        type: 'POST',
+                        data: {
+                            'action': 'get_product_inventory',
+                            'product': product
+                        }
+                    }).then(function(data) {
+                        data = JSON.parse(data);
+                        if (data.text == 'success') {
+                            $(thisSearchResult).parent().parent().find('.b2bking_bulkorder_form_container_content_line_inv')[0].innerText = data.inventory;
+                        } else {
+                            console.log("Fail: " + data);
+                        }
+                    }).fail(function(error) {
+                        console.log("Something went wrong: " + error.responseText);
+                    });
+                })
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress snippets - Clear line inventory on clicking clear
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('.b2bking_bulkorder_form_container_content_line').on('click', 'button.b2bking_bulkorder_clear', function() {
+                    let thisButton = $(this)[0];
+                    $(thisButton).parent().find('.b2bking_bulkorder_form_container_content_line_inv')[0].innerText = "";
                 });
             });
         </script>
