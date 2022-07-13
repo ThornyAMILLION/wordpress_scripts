@@ -226,7 +226,8 @@
 
         $start_date = new DateTime("first day of this month");
         $end_date = new DateTime("last day of this month");
-        
+        $month = date_format($start_date, 'F');
+
         $start_date = $start_date->format('Y-m-d');
         $end_date = $end_date->format('Y-m-d');
 
@@ -239,6 +240,12 @@
         if ($end_date !== '') {
             $orders_array = array_filter($orders_array, function($order) use ($end_date) {
                 return $order['date_created'] < $end_date;
+            });
+        }
+
+        if ($month !== '') {
+            $orders_array = array_filter($orders_array, function($order) use ($month) {
+                return $order['statement_month'] == $month;
             });
         }
         
@@ -263,7 +270,8 @@
 		
             if ($roles[0] == 'administrator') {
                 $next_month = date('F', strtotime($item['statement_month'] . '+1 month'));
-                $html .= '<select class="statement-select-month"><option value="' . $item['statement_month'] . '">' . $item['statement_month'] . '</option><option value="' . $next_month . '">' . $next_month . '</option></select>';
+                $prev_month = date('F', strtotime($item['statement_month'] . 'last month'));
+				$html .= '<select class="statement-select-month"><option value="' . $item['statement_month'] . '">' . $item['statement_month'] . '</option><option value="' . $prev_month . '">' . $prev_month . '</option><option value="' . $next_month . '">' . $next_month . '</option></select>';
             } else {
                 $html .= $item['statement_month'];
             }
@@ -387,19 +395,19 @@
                         data = JSON.parse(data);
                         if (data.text == 'success') {
                             let header = '';
-                            let table = $('#statement-table').html();
                             let footer = '';
 
                             let printwin = window.open("");
-                            printwin.document.write(table); 
+                            printwin.document.write(data.body); 
+                            printwin.document.write(data.footer); 
                             printwin.stop();
                             printwin.print();
                             printwin.close();
                         } else {
-                            console.log('Fail: ', data);
+                            console.log('Fail: ' + data);
                         }
                     }).fail(function(error) {
-                        console.log('Something went wrong: ', error.responseText);
+                        console.log('Something went wrong: ' + error.responseText);
                     });
                 });
             });

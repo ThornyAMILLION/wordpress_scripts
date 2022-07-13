@@ -1,11 +1,91 @@
+/* Enter Your Custom CSS Here */
 #b2bking_bulkorder_search_text_indigo.b2bking_bulkorder_search_text_cream {
-	height: 100%;
+    height: 100%;
 }
 
 #statement_form label, #statement_form button {
-	margin: 0 10px;
+    margin: 0 10px;
 }
 
 .entry-header {
-	display: none;
+    display: none;
+}
+
+.b2bking_bulkorder_form_container_content_header .b2bking_bulkorder_form_container_content_header_qty {
+    width: 10%;
+display: inline-block;
+text-align: center;
+font-family: Roboto;
+font-style: normal;
+font-weight: bold;
+font-size: 14px;
+color: #4E4E4E;
+margin-right: 0% !important;
+margin-left: 0% !important;
+}
+
+.b2bking_bulkorder_form_container_content_header .b2bking_bulkorder_form_container_content_header_inv {
+    width: 10%;
+display: inline-block;
+text-align: center;
+font-family: Roboto;
+font-style: normal;
+font-weight: bold;
+font-size: 14px;
+color: #4E4E4E;
+margin-left: 1%;
+}
+
+.b2bking_bulkorder_form_container_content_header .b2bking_bulkorder_form_container_content_header_subtotal {
+    width: 9%;
+display: inline-block;
+text-align: right;
+font-family: Roboto;
+font-style: normal;
+font-weight: bold;
+font-size: 14px;
+color: #4E4E4E;
+}
+
+.b2bking_bulkorder_form_container_content_line_inv {
+    width: 3%;
+    text-align: right;
+    padding-right: 7px;
+    display: inline-block;
+    font-family: "Roboto Medium", Roboto;
+    font-style: normal;
+    font-weight: 500;
+    font-size: 14px;
+    line-height: 21px;
+    color: #6B6B6B;
+    box-sizing: border-box;
+}
+
+.b2bking_bulkorder_form_container_content_line_subtotal {
+    width: 9% !important;
+}
+
+.b2bking_bulkorder_form_container_content_line_subtotal_indigo, .b2bking_bulkorder_form_container_content_line_subtotal_cream {
+    width: 15% !important;
+}
+
+button.b2bking_bulkorder_indigo_add.b2bking_bulkorder_cream_add {
+    width: 55% !important;
+}
+
+.b2bking_bulkorder_form_container_content_header_qty_indigo.b2bking_bulkorder_form_container_content_header_qty_cream {
+    margin-right: 0%;
+margin-left: 16%;
+}
+
+.b2bking_bulkorder_indigo_product_container.b2bking_bulkorder_cream_product_container {
+    width: 56%;
+}
+
+.b2bking_bulkorder_form_container_content_line_qty_indigo.b2bking_bulkorder_form_container_content_line_qty_cream {
+    margin: 0% 0% !important;
+}
+
+.b2bking_bulkorder_form_container_content_line_subtotal_indigo.b2bking_bulkorder_form_container_content_line_subtotal_cream {
+    padding-left: 3%;
 }

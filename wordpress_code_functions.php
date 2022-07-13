@@ -206,6 +206,7 @@
             $roles = (array) $user->roles;
             $start_date = $_POST['startDate'];
             $end_date = $_POST['endDate'];
+            $month = '';
             $order_status = $_POST['orderStatus'];
             $user_statement = '';
             
@@ -245,13 +246,10 @@
                 array_push($orders_array, $order_info);
             }
 
-            $start_date = new DateTime("first day of this month");
-            $end_date = new DateTime("last day of this month");
-            
-            $start_date = $start_date->format('Y-m-d');
-            $end_date = $end_date->format('Y-m-d');
-
             if ($start_date !== '') {
+                $date = new DateTime($start_date);
+                $month = date_format($date, 'F');
+
                 $orders_array = array_filter($orders_array, function($order) use ($start_date) {
                     return $order['date_created'] > $start_date;
                 });
@@ -260,6 +258,12 @@
             if ($end_date !== '') {
                 $orders_array = array_filter($orders_array, function($order) use ($end_date) {
                     return $order['date_created'] < $end_date;
+                });
+            }
+
+            if ($month !== '') {
+                $orders_array = array_filter($orders_array, function($order) use ($month) {
+                    return $order['statement_month'] == $month;
                 });
             }
 
@@ -288,7 +292,8 @@
             
                 if ($roles[0] == 'administrator') {
                     $next_month = date('F', strtotime($item['statement_month'] . '+1 month'));
-                    $html .= '<select class="statement-select-month"><option value="' . $item['statement_month'] . '">' . $item['statement_month'] . '</option><option value="' . $next_month . '">' . $next_month . '</option></select>';
+                    $prev_month = date('F', strtotime($item['statement_month'] . 'last month'));
+				    $html .= '<select class="statement-select-month"><option value="' . $item['statement_month'] . '">' . $item['statement_month'] . '</option><option value="' . $prev_month . '">' . $prev_month . '</option><option value="' . $next_month . '">' . $next_month . '</option></select>';
                 } else {
                     $html .= $item['statement_month'];
                 }
@@ -312,81 +317,121 @@
     // Wordpress snippets - Open new window to allow for users to print statement as pdf
     function statement_info() {
         if (isset($_POST)) {
-            $user = wp_get_current_user();
-            $roles = (array) $user->roles;
-            $start_date = $_POST['startDate'];
-            $end_date = $_POST['endDate'];
-            $order_status = $_POST['orderStatus'];
-            $user_statement = '';
-    
-            $customer_orders = [];
-            if ($roles[0] == 'administrator') {
-                $user_statement = $_POST['userStatement'];
-                $customer_orders = get_posts(array(
-                    'numberposts' => -1,
-                    'post_type'   => wc_get_order_types(),
-                    'post_status' => array_keys(wc_get_order_statuses()),
-                ));
-            } else {
-                $customer_orders = get_posts(array(
-                    'numberposts' => -1,
-                    'meta_key'    => '_customer_user',
-                    'meta_value'  => get_current_user_id(),
-                    'post_type'   => wc_get_order_types(),
-                    'post_status' => array_keys(wc_get_order_statuses()),
-                ));
-            }
-    
-            $orders_array = [];
-    
-            foreach($customer_orders as $key => $id) {
-                $order = wc_get_order($id->ID);
-                $order_user = $order->get_user();
-                $date = date_create($order->get_date_created());
-                $date = date_format($date,"Y-m-d H:i:s");
-                $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id(), 'user' => $order_user->display_name];
-                array_push($orders_array, $order_info);
-            }
-    
-            $start_date = new DateTime("first day of this month");
-            $end_date = new DateTime("last day of this month");
-    
-            $start_date = $start_date->format('Y-m-d');
-            $end_date = $end_date->format('Y-m-d');
-    
-            if ($start_date !== '') {
-                $orders_array = array_filter($orders_array, function($order) use ($start_date) {
-                    return $order['date_created'] > $start_date;
-                });
-            }
-    
-            if ($end_date !== '') {
-                $orders_array = array_filter($orders_array, function($order) use ($end_date) {
-                    return $order['date_created'] < $end_date;
-                });
-            }
-    
-            if ($order_status !== '') {
-                if ($order_status == 'Paid') {
-                    $orders_array = array_filter($orders_array, function($order) {
-                        return $order['status'] == 'completed' || $order['status'] == 'return-approved' || $order['status'] == 'return-requested';
-                    });
+            if ($_POST['userStatement'] != '') {
+                $user = wp_get_current_user();
+                $roles = (array) $user->roles;
+                $start_date = $_POST['startDate'];
+                $end_date = $_POST['endDate'];
+                $month = '';
+                $order_status = $_POST['orderStatus'];
+                $user_statement = '';
+                $customer_orders = [];
+                $customer_info = '';
+
+                if ($roles[0] == 'administrator') {
+                    $user_statement = $_POST['userStatement'];
+                    $customer_orders = get_posts(array(
+                        'numberposts' => -1,
+                        'meta_key'    => '_customer_user',
+                        'meta_value'  => $user_statement,
+                        'post_type'   => wc_get_order_types(),
+                        'post_status' => array_keys(wc_get_order_statuses()),
+                    ));
+                    $customer_info = new WC_Customer($user_statement);
                 } else {
-                    $orders_array = array_filter($orders_array, function($order) {
-                        return $order['status'] != 'completed' && $order['status'] != 'return-approved' && $order['status'] != 'return-requested';
+                    $customer_orders = get_posts(array(
+                        'numberposts' => -1,
+                        'meta_key'    => '_customer_user',
+                        'meta_value'  => get_current_user_id(),
+                        'post_type'   => wc_get_order_types(),
+                        'post_status' => array_keys(wc_get_order_statuses()),
+                    ));
+                    $customer_info = new WC_Customer(get_current_user_id());
+                }
+        
+                $orders_array = [];
+                foreach($customer_orders as $key => $id) {
+                    $order = wc_get_order($id->ID);
+                    $order_user = $order->get_user();
+                    $date = date_create($order->get_date_created());
+                    $date2 = date_format($date, "F");
+                    $date = date_format($date, "Y-m-d H:i:s");
+
+                    if (get_post_meta($order->get_id(), 'statement_month', true) == '') {
+                        update_post_meta($order->get_id(), 'statement_month', $date2);
+                    } else {
+                        $date2 = get_post_meta($order->get_id(), 'statement_month', true);
+                    }
+
+                    $order_info = ['id' => $order->get_id(), 'subtotal' => $order->get_subtotal(), 'tax' => $order->get_total_tax(), 'total' => $order->get_total(), 'date_created' => $date, 'status' => $order->get_status(), 'user_id' => $order->get_user_id(), 'user' => $order_user->display_name, 'statement_month' => $date2];
+                    array_push($orders_array, $order_info);
+                }
+        
+                if ($start_date !== '') {
+                    $date = new DateTime($start_date);
+                    $month = date_format($date, 'F'); 
+
+                    $orders_array = array_filter($orders_array, function($order) use ($start_date) {
+                        return $order['date_created'] > $start_date;
                     });
                 }
-            }
-            
-            $orders_array = array_values($orders_array);
+        
+                if ($end_date !== '') {
+                    $orders_array = array_filter($orders_array, function($order) use ($end_date) {
+                        return $order['date_created'] < $end_date;
+                    });
+                }
+
+                if ($month !== '') {
+                    $orders_array = array_filter($orders_array, function($order) use ($month) {
+                        return $order['statement_month'] == $month;
+                    });
+                }
+        
+                if ($order_status !== '') {
+                    if ($order_status == 'Paid') {
+                        $orders_array = array_filter($orders_array, function($order) {
+                            return $order['status'] == 'completed' || $order['status'] == 'return-approved' || $order['status'] == 'return-requested';
+                        });
+                    } else {
+                        $orders_array = array_filter($orders_array, function($order) {
+                            return $order['status'] != 'completed' && $order['status'] != 'return-approved' && $order['status'] != 'return-requested';
+                        });
+                    }
+                }
                 
-            if (empty($orders_array)) {
-                $data = 'fail: no orders match filters.';
+                $orders_array = array_values($orders_array);
+                
+                $customer_display_name = '';
+                $customer_address = '';
+                $customer_city = '';
+                $customer_state = '';
+                $customer_post_code = '';
+                $customer_email = '';
+                $customer_phone = '';
+
+                $header = ""
+
+                $body = '<div class="statements"><div id="statement-table"><table><thead><tr><th>Order ID</th><th>User</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Statement Month</th></tr></thead><tbody class="statement-table-body">';
+
+                foreach($orders_array as $key => $item) {
+                    $body .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>' . $item['statement_month'] . '</td></tr>';
+                }
+
+                $body .= '</tbody></table></div><button id="statement_print_button" type="button">Print</button></div>';
+
+                $footer = '<div class="bottom-spacer"><p>NOTE: Eligible for early pay only if paid within 10 days. 2% interest per month on all accounts over 30 days. 5% handling fee on all new returns. All goods to be returned must be in original package. Within 5 days of shipment all discrepancy must be reported.</p></div>';
+
+                if (empty($orders_array)) {
+                    $data = 'no orders match filters.';
+                } else {
+                    $data = ['orders' => $orders_array, 'text' => 'success', 'body' => $body, 'header' => '', 'footer' => $footer];
+                }
             } else {
-                $data = ['orders' => $orders_array, 'text' => 'success'];
+                $data = 'No user selected';
             }
+            echo json_encode($data);
         }
-        echo json_encode($data);
         die();
     }
     // This bit is a special action hook that works with the WordPress AJAX functionality.
