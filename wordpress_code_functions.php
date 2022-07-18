@@ -179,9 +179,9 @@
                 $product = wc_get_product($item->get_product_id());
                 $temp_item = $product->get_sku();
                 if (!stristr($temp_item, 'AFN')) {
-                    $prices_to_discount += number_format($item->get_total());
+                    $prices_to_discount += number_format($item->get_subtotal());
                 } else {
-                    $prices_to_add += number_format($item->get_total());
+                    $prices_to_add += number_format($item->get_subtotal());
                 }
             }
     
@@ -229,7 +229,7 @@
             }
             
             $orders_array = [];
-            foreach($customer_orders as $key => $id) {
+            foreach($customer_orders as $id) {
                 $order = wc_get_order($id->ID);
                 $order_user = $order->get_user();
                 $date = date_create($order->get_date_created());
@@ -287,8 +287,8 @@
 
             $orders_array = array_values($orders_array);
             $html = '';
-            foreach($orders_array as $key => $item) {
-                $html .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>';
+            foreach($orders_array as $item) {
+                $html .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . number_format($item['subtotal'], 2) . '</td><td>$' . number_format($item['tax'], 2) . '</td><td>$' . number_format($item['total'], 2) . '</td><td>';
             
                 if ($roles[0] == 'administrator') {
                     $next_month = date('F', strtotime($item['statement_month'] . '+1 month'));
@@ -350,7 +350,7 @@
                 }
         
                 $orders_array = [];
-                foreach($customer_orders as $key => $id) {
+                foreach($customer_orders as $id) {
                     $order = wc_get_order($id->ID);
                     $order_user = $order->get_user();
                     $date = date_create($order->get_date_created());
@@ -388,44 +388,50 @@
                     });
                 }
         
-                if ($order_status !== '') {
-                    if ($order_status == 'Paid') {
-                        $orders_array = array_filter($orders_array, function($order) {
-                            return $order['status'] == 'completed' || $order['status'] == 'return-approved' || $order['status'] == 'return-requested';
-                        });
-                    } else {
-                        $orders_array = array_filter($orders_array, function($order) {
-                            return $order['status'] != 'completed' && $order['status'] != 'return-approved' && $order['status'] != 'return-requested';
-                        });
-                    }
-                }
+                $orders_array = array_filter($orders_array, function($order) {
+                    return preg_match("/completed|return\-approved|return\-requested|processing|on\-hold/i", $order['status']);
+                });
                 
                 $orders_array = array_values($orders_array);
-                
-                $customer_display_name = '';
-                $customer_address = '';
-                $customer_city = '';
-                $customer_state = '';
-                $customer_post_code = '';
-                $customer_email = '';
-                $customer_phone = '';
 
-                $header = ""
+                $customer_display_name = $customer_info->get_display_name();
+                $customer_address = $customer_info->get_billing_address_1();
+                $customer_city = $customer_info->get_billing_city();
+                $customer_state = $customer_info->get_billing_state();
+                $customer_post_code = $customer_info->get_billing_postcode();
+                $customer_email = $customer_info->get_email();
+                $customer_phone = $customer_info->get_billing_phone();
 
-                $body = '<div class="statements"><div id="statement-table"><table><thead><tr><th>Order ID</th><th>User</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Statement Month</th></tr></thead><tbody class="statement-table-body">';
+                $site_icon = '<table class="head container"><tr><td class="header"><img src="' . get_site_icon_url() . '" alt="Max Advanced Brakes" width="200" height="100"></td></tr></table>';
 
-                foreach($orders_array as $key => $item) {
-                    $body .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>' . $item['statement_month'] . '</td></tr>';
+                $header = '<div><table class="order-data-addresses"><tbody><tr><td class="address billing-address"><div>' . $customer_display_name . '</div><div>' . $customer_address . '</div><div>' . $customer_city . ' ' . $customer_state . ' ' . $customer_post_code . '</div><div class="billing-email">' . $customer_email . '</div><div class="billing-phone">' . $customer_phone . '</div></td></tr></tbody></table></div>';
+
+                $body = '<div class="statements"><div id="statement-table"><table class="order-details"><thead><tr><th>Order ID</th><th>User</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
+
+                $tax_total = 0;
+                $prices_to_discount = 0;
+		        $prices_to_add = 0;
+                $statement_total = 0;
+                foreach($orders_array as $item) {
+                    $prices_to_discount += number_format($item['subtotal'], 2);
+                    $tax_total += number_format($item['tax'], 2);
+                    $statement_total += number_format($item['total'], 2);
+
+                    $body .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . number_format($item['subtotal'], 2) . '</td><td>$' . number_format($item['tax'], 2) . '</td><td>$' . number_format($item['total'], 2) . '</td></tr>';
                 }
 
-                $body .= '</tbody></table></div><button id="statement_print_button" type="button">Print</button></div>';
+                $two_percent_total = ($prices_to_discount * 0.98) + $prices_to_add + $tax_total;
+
+                $body .= '</tbody><tfoot><tr class="no-borders"><td class="no-borders"><div class="document-notes"></div><div class="customer-notes"></div></td><td class="no-borders" colspan="2"><table class="totals"><tfoot><tr><th class="description">Total</th><td class="price"><span class="totals-price">$' . number_format($statement_total, 2) . '</span></td></tr><tr><th class="description">Early Pay (2% 10 days)</th><td class="price"><span class="totals-price">$' . number_format($two_percent_total, 2) . '</span></td></tr></tfoot></table></td></tr></tfoot></table></div></div>';
 
                 $footer = '<div class="bottom-spacer"><p>NOTE: Eligible for early pay only if paid within 10 days. 2% interest per month on all accounts over 30 days. 5% handling fee on all new returns. All goods to be returned must be in original package. Within 5 days of shipment all discrepancy must be reported.</p></div>';
+
+                $style = "/* Main Body */ @page { margin-top: 1cm; margin-bottom: 3cm; margin-left: 2cm; margin-right: 2cm; } body { background: #fff; color: #000; margin: 0cm; font-family: 'Open Sans', sans-serif; /* want to use custom fonts? http://docs.wpovernight.com/woocommerce-pdf-invoices-packing-slips/using-custom-fonts/ */ font-size: 9pt; line-height: 100%; /* fixes inherit dompdf bug */ } h1, h2, h3, h4 { font-weight: bold; margin: 0; } h1 { font-size: 16pt; margin: 5mm 0; } h2 { font-size: 14pt; } h3, h4 { font-size: 9pt; } p { margin: 0; padding: 0; } p + p { margin-top: 1.25em; } a { border-bottom: 1px solid; text-decoration: none; } /* Basic Table Styling */ table { border-collapse: collapse; border-spacing: 0; page-break-inside: always; border: 0; margin: 0; padding: 0; } th, td { vertical-align: top; text-align: left; } table.container { width:100%; border: 0; } tr.no-borders, td.no-borders { border: 0 !important; border-top: 0 !important; border-bottom: 0 !important; padding: 0 !important; width: auto; } div.bottom-spacer { clear: both; height: 8mm; } /* Header */ table.head { margin-bottom: 12mm; } td.header img { max-height: 3cm; /* may be overriden by the settings */ width: auto; } td.header { font-size: 16pt; font-weight: 700; } td.shop-info { width: 40%; } .document-type-label { text-transform: uppercase; } /* Recipient addressses & order data */ table.order-data-addresses { width: 100%; margin-bottom: 10mm; } table.order-data-addresses td.address { word-wrap: break-word; } td.order-data { width: 40%; } td.order-data table { width: 100%; } td.order-data table th { font-weight: normal; padding-right: 2mm; width: 50%; } .invoice .shipping-address { width: 30%; } .packing-slip .billing-address { width: 30%; } /* Order details */ table.order-details { width:100%; margin-bottom: 8mm; page-break-before: avoid; } .order-details tr { page-break-inside: always; page-break-after: auto; } .order-details td, .order-details th { border-bottom: 1px #ccc solid; border-top: 1px #ccc solid; padding: 0.375em; } .order-details th { font-weight: bold; text-align: left; } .order-details thead th { color: white; background-color: black; border-color: black; } /* item meta formatting for WC2.6 and older */ dl { margin: 4px 0; } dt, dd, dd p { display: inline; font-size: 7pt; line-height: 7pt; } dd { margin-left: 5px; } dd:after { content: '\A'; white-space: pre; } /* item-meta formatting for WC3.0+ */ .wc-item-meta { margin: 4px 0; font-size: 7pt; line-height: 7pt; } .wc-item-meta p { display: inline; } .wc-item-meta li { margin: 0; margin-left: 5px; } /* Notes & Totals */ .document-notes, .customer-notes { margin-top: 5mm; word-wrap: break-word; } table.totals { width: 100%; margin-top: 5mm; table-layout: fixed; } table.totals th, table.totals td { border: 0; border-top: 1px solid #ccc; border-bottom: 1px solid #ccc; } table.totals th.description, table.totals td.price { width: 50%; } table.totals tr.order_total td, table.totals tr.order_total th { border-top: 2px solid #000; border-bottom: 2px solid #000; font-weight: bold; } table.totals tr.payment_method { display: none; } /* Footer Imprint */ #footer { position: absolute; bottom: -2cm; left: 0; right: 0; height: 2cm; /* if you change the footer height, don't forget to change the bottom (=negative height) and the @page margin-bottom as well! */ text-align: center; border-top: 0.1mm solid gray; margin-bottom: 0; padding-top: 2mm; } /* page numbers */ .pagenum:before { content: counter(page); } .pagenum,.pagecount { font-family: sans-serif; }";
 
                 if (empty($orders_array)) {
                     $data = 'no orders match filters.';
                 } else {
-                    $data = ['orders' => $orders_array, 'text' => 'success', 'body' => $body, 'header' => '', 'footer' => $footer];
+                    $data = ['orders' => $orders_array, 'text' => 'success', 'icon' => $site_icon, 'body' => $body, 'header' => $header, 'footer' => $footer, 'style' => $style];
                 }
             } else {
                 $data = 'No user selected';

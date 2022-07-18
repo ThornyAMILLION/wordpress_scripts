@@ -207,7 +207,7 @@
         }
 
         $orders_array = [];
-        foreach($customer_orders as $key => $id) {
+        foreach($customer_orders as $id) {
             $order = wc_get_order($id->ID);
             $order_user = $order->get_user();
             $date = date_create($order->get_date_created());
@@ -265,8 +265,8 @@
 
         $html .= '<button id="statement_filter_button" type="button">Filter</button><button id="statement_clear_button">Clear</button></form><div id="statement-table"><table><thead><tr><th>Order ID</th><th>User</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th><th>Statement Month</th></tr></thead><tbody class="statement-table-body">';
     
-        foreach($orders_array as $key => $item) {
-            $html .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td><td>';
+        foreach($orders_array as $item) {
+            $html .= '<tr><td class="statement-order-id">' . $item['id'] . '</td><td>' . $item['user'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . number_format($item['subtotal'], 2) . '</td><td>$' . number_format($item['tax'], 2) . '</td><td>$' . number_format($item['total'], 2) . '</td><td>';
 		
             if ($roles[0] == 'administrator') {
                 $next_month = date('F', strtotime($item['statement_month'] . '+1 month'));
@@ -394,12 +394,11 @@
                     }).then(function(data) {
                         data = JSON.parse(data);
                         if (data.text == 'success') {
-                            let header = '';
-                            let footer = '';
-
                             let printwin = window.open("");
+                            printwin.document.write(data.header);
                             printwin.document.write(data.body); 
-                            printwin.document.write(data.footer); 
+                            printwin.document.write(data.footer);
+                            printwin.document.write(data.style);
                             printwin.stop();
                             printwin.print();
                             printwin.close();
@@ -436,7 +435,7 @@
         
 
         $orders_array = [];
-        foreach($customer_orders as $key => $id) {
+        foreach($customer_orders as $id) {
             $order = wc_get_order($id->ID);
             $date = date_create($order->get_date_created());
             $date = date_format($date,"Y-m-d H:i:s");
@@ -446,7 +445,7 @@
 
         $html = '<div class="statements"><div id="statement-table"><table><thead><tr><th>Order ID</th><th>Date Created</th><th>Status</th><th>Subtotal</th><th>Tax</th><th>Total</th></tr></thead><tbody class="statement-table-body">';
 
-        foreach($orders_array as $key => $item) {
+        foreach($orders_array as $item) {
             $html .= '<tr><td>' . $item['id'] . '</td><td>' . $item['date_created'] . '</td><td>' . $item['status'] . '</td><td>$' . $item['subtotal'] . '</td><td>$' . $item['tax'] . '</td><td>$' . $item['total'] . '</td></tr>';
         }
 
@@ -624,6 +623,205 @@
                     let thisButton = $(this)[0];
                     $(thisButton).parent().find('.b2bking_bulkorder_form_container_content_line_inv')[0].innerText = "";
                 });
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress snippets - Show all products snippet
+    add_shortcode( 'my_purchased_products', 'get_all_customer_purchased_products' );
+    function get_all_customer_purchased_products() {
+        // GET CURRENT USER
+        $current_user = wp_get_current_user();
+        if (0 == $current_user->ID) {
+            return;
+        }
+
+        // GET USER ORDERS (COMPLETED + PROCESSING)
+        $customer_orders = get_posts(array(
+            'numberposts' => -1,
+            'meta_key'    => '_customer_user',
+            'meta_value'  => $current_user->ID,
+            'post_type'   => wc_get_order_types(),
+            'post_status' => array("wc-completed", "wc-processing", "wc-on-hold", "wc-shipped"),
+        ));
+
+        // LOOP THROUGH ORDERS AND GET PRODUCT IDS
+        if (!$customer_orders) {
+            return;
+        }
+
+        $products = [];
+        foreach ($customer_orders as $customer_order) {
+            $order = wc_get_order($customer_order->ID);
+            $items = $order->get_items();
+            foreach ($items as $item) {
+
+                $item_tax = $item->get_total() * 0.13;
+                if ($order->get_payment_method() != 'cod' && $order->get_total() > get_post_meta($order->get_id(), 'two_percent_early_pay', true)) {
+                    $item_total = ($item->get_total() * 0.98) + $item_tax;
+                } else {
+                    $item_total = $item->get_total() + $item_tax;
+                }
+
+                $product_info = ['product_name' => $item->get_name(), 'product_id' => $item->get_id(), 'order_id' => $customer_order->ID, 'quantity' => $item->get_quantity(), 'product_total' => $item_total, 'product_tax' => $item_tax, 'product_subtotal' => $item->get_total(), 'variation_id' => $item->get_variation_id()];
+                array_push($products, $product_info);
+            }
+        }
+
+        $html = '<table class="customer-products-purchased"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody>';
+
+        foreach($products as $product) {
+            $html .= '<tr class="purchased-product"><td class="product-item-id">' . $product['product_id'] . '</td><td class="product-name">' . $product['product_name'] . '</td><td class="product-id">' . $product['variation_id'] . '</td><td class="order-id">' . $product['order_id'] . '</td><td class="product-quantity"><input type="number" value="' . $product['quantity'] . '" min="1" max="' . $product['quantity'] . '"></td><td class="product-subtotal">$' . number_format($product['product_subtotal'], 2) . '</td><td class="product-tax">$' . number_format($product['product_tax'], 2) . '</td><td class="product-total">$' . number_format($product['product_total'], 2) . '</td><td class="return-button-add"><button class="return-add-to-cart" type="button">+</button></button></td></tr>';
+        }
+
+        $html .= '</tbody></table><table class="return-cart"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody class="return-to-cart-body"></tbody></table>';
+
+        return $html;
+    }
+
+    // Wordpress snippets - Add to return cart
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('.return-add-to-cart').on('click', function() {
+                    let thisbutton = $(this);
+                    let tablebody = $('.return-to-cart-body');
+                    let tablerow = $(thisbutton).parent().parent().children();
+                    let cartProductIds = $('.return-to-cart-body .product-item-id');
+                    
+                    let isMatch = false;
+                    for (let item of cartProductIds) {
+                        if (item.innerText == tablerow[0].innerText) {
+                            isMatch = true;
+                            break;
+                        }
+                    }
+
+                    if (isMatch == false) {
+                        let html = '<tr>';
+                        for (let tableItem of tablerow) {
+                            if (tableItem.className == 'product-id') {
+                                html += '<td class="product-id">' + tableItem.innerText + '</td>';
+                            } else if (tableItem.className == 'product-item-id') {
+                                html += '<td class="product-item-id">' + tableItem.innerText + '</td>';
+                            } else if (tableItem.className == 'product-quantity') {
+                                html += '<td>' + tableItem.children[0].value + '</td>';
+                            } else if (tableItem.className == 'return-button-add') {
+                                html += '<td><button class="return-button-remove" type="button">-</button></td>';
+                            } else {
+                                html += '<td>' + tableItem.innerText + '</td>';
+                            }
+                        }
+                        html += '</tr>';
+                        tablebody.append(html);
+                    } else {
+                        alert('Item is already in cart');
+                    }
+                })
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress snippets - Remove from return cart
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('.return-to-cart-body').on('click', 'button.return-button-remove', function() {
+                    $(this).parent().parent().remove();
+                })
+            });
+        </script>
+        <?php
+    });
+
+    // Wordpress snippets - Request Return
+    add_action('wp_footer', function() {
+        ?>
+        <script>
+            jQuery(document).ready(function() {
+                $('.request-return-button').on('click', function() {
+                    let refund_method = 'wallet_method';
+                    let count = 0;
+                    let product_info = {};
+                    let selected_product = {};
+                    let rr_subject = 'Return';
+                    let rr_reason = '';
+                    let orders = [];
+                    let order_ids = [];
+                    
+                    let tableRows = $('.return-to-cart-body tr');
+                    for (let row of tableRows) {
+                        let columns = $(row).children();
+                        let order_id = columns[3].innerText;
+                        
+                        let isMatch = false;
+                        for (let orderid of order_ids) {
+                            if (orderid == order_id) {
+                                isMatch = true;
+                                break;
+                            }
+                        }
+                        
+                        if (isMatch == false) {
+                            order_ids.push(order_id);
+                        }
+                    }
+                    
+                    for (let orderid of order_ids) {
+                        let total_refund = 0;
+                        selected_product = {};
+                        for (let row of tableRows) {
+                            let columns = $(row).children();
+                            if (orderid == columns[3].innerText) {
+                                product_info = {};
+                                let variation_id = columns[2].innerText;
+                                let product_id = '';
+                                let item_id = columns[0].innerText;
+                                let product_price = columns[7].innerText;
+                                let product_qty = columns[4].innerText;
+                                product_price = product_price.replace('$', '');
+                                product_info['product_id'] = product_id;
+                                product_info['variation_id'] = variation_id;
+                                product_info['item_id'] = item_id;
+                                product_info['price'] = product_price;
+                                product_info['qty'] = product_qty;
+                                selected_product[count] = product_info;
+                                count++;
+                                total_refund += Number(product_price);
+                            }
+                        }
+                        orders.push([orderid, selected_product, total_refund])
+                    }				
+                    
+                    let responses = orders.map((order) => {
+                        let data = {
+                            action	:'wps_rma_save_return_request',
+                            products: order[1],
+                            amount	: order[2],
+                            subject	: rr_subject,
+                            reason	: rr_reason,
+                            orderid : order[0],
+                            bankdetails : $( '#wps_rma_bank_details' ).val(),
+                            refund_method : refund_method,
+                            security_check	: wrael_common_param.wps_rma_nonce
+                        }
+    
+                        return $.ajax({
+                            url: wrael_common_param.ajaxurl, 
+                            type: 'POST',  
+                            data: data,
+                            dataType :'json',
+                        })
+                    })
+
+                    $.when(responses).done(function() {
+                        console.log("success");
+                    })
+                })
             });
         </script>
         <?php

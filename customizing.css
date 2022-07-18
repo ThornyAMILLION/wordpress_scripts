@@ -1,0 +1,7 @@
+.site-search, .wp-post-image {
+	display: none !important;
+}
+
+.woocommerce-button.order-again {
+	display: none;
+}
