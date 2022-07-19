@@ -395,11 +395,7 @@
                         data = JSON.parse(data);
                         if (data.text == 'success') {
                             let printwin = window.open("");
-                            printwin.document.write(data.header);
-                            printwin.document.write(data.body); 
-                            printwin.document.write(data.footer);
-                            printwin.document.write(data.style);
-                            printwin.stop();
+                            printwin.document.body.innerHTML = '<div>' + data.icon + data.header + data.body + data.footer + data.style + '</div>';
                             printwin.print();
                             printwin.close();
                         } else {
@@ -636,7 +632,7 @@
         if (0 == $current_user->ID) {
             return;
         }
-
+    
         // GET USER ORDERS (COMPLETED + PROCESSING)
         $customer_orders = get_posts(array(
             'numberposts' => -1,
@@ -645,38 +641,34 @@
             'post_type'   => wc_get_order_types(),
             'post_status' => array("wc-completed", "wc-processing", "wc-on-hold", "wc-shipped"),
         ));
-
-        // LOOP THROUGH ORDERS AND GET PRODUCT IDS
-        if (!$customer_orders) {
-            return;
-        }
-
+    
         $products = [];
         foreach ($customer_orders as $customer_order) {
             $order = wc_get_order($customer_order->ID);
             $items = $order->get_items();
             foreach ($items as $item) {
-
+                $product = $item->get_product();
+                
                 $item_tax = $item->get_total() * 0.13;
                 if ($order->get_payment_method() != 'cod' && $order->get_total() > get_post_meta($order->get_id(), 'two_percent_early_pay', true)) {
                     $item_total = ($item->get_total() * 0.98) + $item_tax;
                 } else {
                     $item_total = $item->get_total() + $item_tax;
                 }
-
-                $product_info = ['product_name' => $item->get_name(), 'product_id' => $item->get_id(), 'order_id' => $customer_order->ID, 'quantity' => $item->get_quantity(), 'product_total' => $item_total, 'product_tax' => $item_tax, 'product_subtotal' => $item->get_total(), 'variation_id' => $item->get_variation_id()];
+                
+                $product_info = ['product_name' => $item->get_name(), 'product_id' => $item->get_id(), 'order_id' => $customer_order->ID, 'quantity' => $item->get_quantity(), 'product_total' => $item_total, 'product_tax' => $item_tax, 'product_subtotal' => $item->get_total(), 'variation_id' => $item->get_variation_id(), 'unit_price' => $product->get_price()];
                 array_push($products, $product_info);
             }
         }
-
-        $html = '<table class="customer-products-purchased"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody>';
-
+    
+        $html = '<table class="customer-products-purchased"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody>';
+    
         foreach($products as $product) {
-            $html .= '<tr class="purchased-product"><td class="product-item-id">' . $product['product_id'] . '</td><td class="product-name">' . $product['product_name'] . '</td><td class="product-id">' . $product['variation_id'] . '</td><td class="order-id">' . $product['order_id'] . '</td><td class="product-quantity"><input type="number" value="' . $product['quantity'] . '" min="1" max="' . $product['quantity'] . '"></td><td class="product-subtotal">$' . number_format($product['product_subtotal'], 2) . '</td><td class="product-tax">$' . number_format($product['product_tax'], 2) . '</td><td class="product-total">$' . number_format($product['product_total'], 2) . '</td><td class="return-button-add"><button class="return-add-to-cart" type="button">+</button></button></td></tr>';
+            $html .= '<tr class="purchased-product"><td class="product-item-id">' . $product['product_id'] . '</td><td class="product-name">' . $product['product_name'] . '</td><td class="product-id">' . $product['variation_id'] . '</td><td class="order-id">' . $product['order_id'] . '</td><td class="product-quantity"><input type="number" value="' . $product['quantity'] . '" min="1" max="' . $product['quantity'] . '"></td><td class="product-unit-price">$' . number_format($product['unit_price'], 2) . '</td><td class="product-subtotal">$' . number_format($product['product_subtotal'], 2) . '</td><td class="product-tax">$' . number_format($product['product_tax'], 2) . '</td><td class="product-total">$' . number_format($product['product_total'], 2) . '</td><td class="return-button-add"><button class="return-add-to-cart" type="button">+</button></button></td></tr>';
         }
-
-        $html .= '</tbody></table><table class="return-cart"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody class="return-to-cart-body"></tbody></table>';
-
+    
+        $html .= '</tbody></table><table class="return-cart"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody class="return-to-cart-body"></tbody></table><button class="request-return-button" type="button">Request Return</button>';
+    
         return $html;
     }
 
@@ -781,13 +773,13 @@
                                 let variation_id = columns[2].innerText;
                                 let product_id = '';
                                 let item_id = columns[0].innerText;
-                                let product_price = columns[7].innerText;
+                                let product_price = columns[5].innerText;
                                 let product_qty = columns[4].innerText;
                                 product_price = product_price.replace('$', '');
                                 product_info['product_id'] = product_id;
                                 product_info['variation_id'] = variation_id;
                                 product_info['item_id'] = item_id;
-                                product_info['price'] = product_price;
+                                product_info['price'] = product_price * 1.13;
                                 product_info['qty'] = product_qty;
                                 selected_product[count] = product_info;
                                 count++;
