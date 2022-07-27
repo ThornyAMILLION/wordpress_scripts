@@ -20,7 +20,7 @@
                         type: 'POST',
                         data: {
                             'action': 'change_order_status_ajax', // This is our PHP function below
-                            'orderNum' : orderNum,
+                            'orderNum': orderNum,
                             'orderStatus': orderStatus,
                             'discountCheck': orderDiscountCheck
                         }
@@ -91,14 +91,14 @@
 
             $url = "https://wptest.maxbrakes.com/";
             $args = array(
-                'method'      => 'POST',
-                'timeout'     => 45,
+                'method' => 'POST',
+                'timeout' => 45,
                 'redirection' => 5,
                 'httpversion' => '1.0',
-                'blocking'    => true,
-                'headers'     => array(),
-                'body'        => $order,
-                'cookies'     => array()
+                'blocking' => true,
+                'headers' => array(),
+                'body' => $order,
+                'cookies' => array()
             );
             
             $response = wp_remote_post($url, $args);
@@ -446,12 +446,22 @@
 
     // B2bking bulk order cream product description
     add_filter('b2bking_bulkorder_indigo_search_name_display', function($name, $product) {
-        $name = $product->get_name() . " | " . $product->get_sku() . " - " . $product->get_description();
+        if ($product->get_sku() === $product->get_name()) {
+            $name = $product->get_sku() . " | " . $product->get_description();
+        } else {
+            $name = $product->get_sku() . " | " . $product->get_name() . " | " . $product->get_description();
+        }
+        
         return $name;
     }, 10, 2);
-    
+
     add_filter('b2bking_bulkorder_cream_search_name_display', function($name, $product) {
-        $name = $product->get_name() . " | " . $product->get_sku() . " - " . $product->get_description();
+        if ($product->get_sku() === $product->get_name()) {
+            $name = $product->get_sku() . " | " . $product->get_description();
+        } else {
+            $name = $product->get_sku() . " | " . $product->get_name() . " | " . $product->get_description();
+        }
+
         return $name;
     }, 10, 2);
 
@@ -503,3 +513,64 @@
     // This bit is a special action hook that works with the WordPress AJAX functionality.
     add_action('wp_ajax_get_product_inventory', 'get_product_inventory');
     add_action('wp_ajax_nopriv_get_product_inventory', 'get_product_inventory'); 
+
+    // Function to accept return request using wps_rma_return_req_approve() as template
+    function return_req_approve() {
+        if (isset($_POST)) {
+            $orderid = $_POST['orderId'];
+            $productid = $_POST['productid'];
+
+            $return_datas = get_post_meta($orderid, 'wps_rma_return_product', true);
+            foreach ($return_datas as $key => $return_data) {
+                $return_products = $return_data['products'];
+                foreach ($return_products as $returnkey => &$return_product) {
+                    if ($return_product['item_id'] != $productid) {
+                        unset($return_product[$returnkey]);
+                    }
+                }
+            }
+            $products = $return_datas;
+            $response = wps_rma_return_req_approve_callback($orderid, $products);
+            echo json_encode($response);
+        }
+        die();
+    }
+    // This bit is a special action hook that works with the WordPress AJAX functionality.
+    add_action('wp_ajax_return_req_approve', 'return_req_approve');
+    add_action('wp_ajax_nopriv_return_req_approve', 'return_req_approve');
+
+    // Function that will send return details to external database
+    function send_return_info_to_external_db() {
+        if (isset($_POST)) {
+            $orders = $_POST['orders'];
+            $date_created = date('Y-m-d');
+
+            $data = ['return_info' => $orders, 'date_created' => $date_created];
+
+            $data = json_encode($data);
+		
+            $url = "https://namor.club/z.php";
+            $args = array(
+                'method' => 'POST',
+                'timeout' => 45,
+                'redirection' => 5,
+                'httpversion' => '1.0',
+                'blocking' => true,
+                'headers' => array(),
+                'body' => $data,
+                'cookies' => array()
+            );
+            
+            $response = wp_remote_post($url, $args);
+            $response = json_encode($response);		
+            
+            // Return the result to the Javascript function (The Callback)
+            if (is_wp_error($response)) {
+                $error_message = $response->get_error_message();
+                echo "Something went wrong: $error_message";
+            } else {
+                echo $response;
+            }
+        }
+        die();
+    }

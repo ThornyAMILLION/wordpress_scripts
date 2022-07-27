@@ -20,40 +20,6 @@ defined( 'ABSPATH' ) || exit;
 // Load jQuery
 wp_enqueue_script('jquery');
 
-// The Javascript
-function post_new_order_script() { 
-	?>
-	<script>
-		jQuery(document).ready(function($) {
-			
-			let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
-			
-			// This is the variable we are passing via AJAX
-			let orderNum = $('.woocommerce-order-overview__order.order strong').text();
-			
-			// This does the ajax request (The Call).
-// 			$.ajax({
-// 				url: ajaxurl, // Since WP 2.8 ajaxurl is always defined and points to admin-ajax.php
-// 				type: 'POST',
-// 				data: {
-// 					'action': 'new_order_ajax_post', // This is our PHP function below
-// 					'orderNum' : orderNum // This is the variable we are sending via AJAX
-// 				},
-// 				success: function(data) {
-// 					// This outputs the result of the ajax request (The Callback)
-// 					data = JSON.parse(data);
-// 					console.log(data.response);
-// 				},
-// 				error: function(errorThrown) {
-// 					window.alert(JSON.stringify(errorThrown));
-// 				}
-// 			});
-		});
-	</script>
-	<?php 
-}
-add_action('wp_footer', 'post_new_order_script');
-
 ?>
 
 <div class="woocommerce-order">
