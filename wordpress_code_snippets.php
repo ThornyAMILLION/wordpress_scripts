@@ -636,6 +636,8 @@
             return;
         }
     
+        $customer_display_name = $current_user->display_name;
+
         // GET USER ORDERS (COMPLETED + PROCESSING)
         $customer_orders = get_posts(array(
             'numberposts' => -1,
@@ -664,13 +666,13 @@
             }
         }
     
-        $html = '<table class="customer-products-purchased"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody>';
+        $html = '<table class="customer-products-purchased"><thead><tr><th>Id</th><th>Customer</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody>';
     
         foreach($products as $product) {
-            $html .= '<tr class="purchased-product"><td class="product-item-id">' . $product['product_id'] . '</td><td class="product-name">' . $product['product_name'] . '</td><td class="product-id">' . $product['variation_id'] . '</td><td class="order-id">' . $product['order_id'] . '</td><td class="product-quantity"><input type="number" value="' . $product['quantity'] . '" min="1" max="' . $product['quantity'] . '"></td><td class="product-unit-price">$' . number_format($product['unit_price'], 2) . '</td><td class="product-subtotal">$' . number_format($product['product_subtotal'], 2) . '</td><td class="product-tax">$' . number_format($product['product_tax'], 2) . '</td><td class="product-total">$' . number_format($product['product_total'], 2) . '</td><td class="return-button-add"><button class="return-add-to-cart" type="button">+</button></button></td></tr>';
+            $html .= '<tr class="purchased-product"><td class="product-item-id">' . $product['product_id'] . '</td><td>' . $customer_display_name . '</td><td class="product-name">' . $product['product_name'] . '</td><td class="product-id">' . $product['variation_id'] . '</td><td class="order-id">' . $product['order_id'] . '</td><td class="product-quantity"><input type="number" value="' . $product['quantity'] . '" min="1" max="' . $product['quantity'] . '"></td><td class="product-unit-price">$' . number_format($product['unit_price'], 2) . '</td><td class="product-subtotal">$' . number_format($product['product_subtotal'], 2) . '</td><td class="product-tax">$' . number_format($product['product_tax'], 2) . '</td><td class="product-total">$' . number_format($product['product_total'], 2) . '</td><td class="return-button-add"><button class="return-add-to-cart" type="button">+</button></button></td></tr>';
         }
     
-        $html .= '</tbody></table><table class="return-cart"><thead><tr><th>Id</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody class="return-to-cart-body"></tbody></table><button class="request-return-button" type="button">Request Return</button>';
+        $html .= '</tbody></table><table class="return-cart"><thead><tr><th>Id</th><th>Customer</th><th>Product Name</th><th>Product Id</th><th>Order Id</th><th>Quantity</th><th>Unit Price</th><th>Subtotal</th><th>Tax</th><th>Total</th><th></th></tr></thead><tbody class="return-to-cart-body"></tbody></table><button class="request-return-button" type="button">Request Return</button>';
     
         return $html;
     }
@@ -743,7 +745,6 @@
                     let refund_method = 'wallet_method';
                     let count = 0;
                     let product_info = {};
-                    let selected_product = {};
                     let rr_subject = 'Return';
                     let rr_reason = '';
                     let orders = [];
@@ -769,7 +770,7 @@
                     
                     for (let orderid of order_ids) {
                         let total_refund = 0;
-                        selected_product = {};
+                        let selected_product = [];
                         for (let row of tableRows) {
                             let columns = $(row).children();
                             if (orderid == columns[3].innerText) {
@@ -779,19 +780,20 @@
                                 let item_id = columns[0].innerText;
                                 let product_price = columns[5].innerText;
                                 let product_qty = columns[4].innerText;
+                                let product_name = columns[1].innerText;
                                 product_price = product_price.replace('$', '');
                                 product_info['product_id'] = product_id;
                                 product_info['variation_id'] = variation_id;
                                 product_info['item_id'] = item_id;
                                 product_info['price'] = product_price * 1.13;
                                 product_info['qty'] = product_qty;
-                                selected_product[count] = product_info;
-                                count++;
+                                product_info['product_name'] = product_name;
+                                selected_product.push(product_info);
                                 total_refund += Number(product_price);
                             }
                         }
                         orders.push([orderid, selected_product, total_refund])
-                    }				
+                    }	
                     
                     let returns = {
                         action: send_return_info_to_external_db,

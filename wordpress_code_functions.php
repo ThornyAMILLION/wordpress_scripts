@@ -545,7 +545,7 @@
             $orders = $_POST['orders'];
             $date_created = date('Y-m-d');
 
-            $data = ['return_info' => $orders, 'date_created' => $date_created];
+            $data = ['return_info' => $orders, 'date_created' => $date_created, 'type' => 'return'];
 
             $data = json_encode($data);
 		

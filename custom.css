@@ -89,3 +89,13 @@ margin-left: 16%;
 .b2bking_bulkorder_form_container_content_line_subtotal_indigo.b2bking_bulkorder_form_container_content_line_subtotal_cream {
     padding-left: 3%;
 }
+
+@media (min-width: 768px) {
+    .col-full {
+        max-width: 73.498938em;
+        margin-left: auto;
+        margin-right: auto;
+        padding: 0 2.617924em;
+        box-sizing: content-box
+    }
+}
