@@ -99,3 +99,11 @@ margin-left: 16%;
         box-sizing: content-box
     }
 }
+
+#post-10 .woocommerce-form.woocommerce-form-login.login, #post-11466 .woocommerce-form.woocommerce-form-login.login {
+    margin: 0 25%;
+}
+
+.return-to-shop {
+    display: none;
+}

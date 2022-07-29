@@ -749,11 +749,12 @@
                     let rr_reason = '';
                     let orders = [];
                     let order_ids = [];
+                    let customer_name = '';
                     
                     let tableRows = $('.return-to-cart-body tr');
                     for (let row of tableRows) {
                         let columns = $(row).children();
-                        let order_id = columns[3].innerText;
+                        let order_id = columns[4].innerText;
                         
                         let isMatch = false;
                         for (let orderid of order_ids) {
@@ -773,44 +774,51 @@
                         let selected_product = [];
                         for (let row of tableRows) {
                             let columns = $(row).children();
-                            if (orderid == columns[3].innerText) {
+                            if (orderid == columns[4].innerText) {
                                 product_info = {};
-                                let variation_id = columns[2].innerText;
-                                let product_id = '';
+                                let variation_id = columns[3].innerText;
+                                let product_id = columns[3].innerText;
                                 let item_id = columns[0].innerText;
-                                let product_price = columns[5].innerText;
-                                let product_qty = columns[4].innerText;
-                                let product_name = columns[1].innerText;
+                                let product_price = columns[6].innerText;
+                                let product_qty = columns[5].innerText;
+                                let product_name = columns[2].innerText;
+                                if (customer_name == '') {
+                                    customer_name = columns[1].innerText;
+                                }
+                                
                                 product_price = product_price.replace('$', '');
                                 product_info['product_id'] = product_id;
                                 product_info['variation_id'] = variation_id;
                                 product_info['item_id'] = item_id;
-                                product_info['price'] = product_price * 1.13;
+                                product_info['price'] = (product_price * 1.13).toFixed(2);
                                 product_info['qty'] = product_qty;
                                 product_info['product_name'] = product_name;
+                                product_info['unit_price'] = product_price;
+                                
                                 selected_product.push(product_info);
                                 total_refund += Number(product_price);
                             }
                         }
                         orders.push([orderid, selected_product, total_refund])
-                    }	
+                    }
                     
                     let returns = {
-                        action: send_return_info_to_external_db,
-                        orders: orders
+                        action: 'send_return_info_to_external_db',
+                        orders: orders,
+                        customer: customer_name
                     }
-
+    
                     $.ajax({
                         url: ajaxurl,
                         type: 'POST',
                         data: returns,
-					    dataType: 'json'
+                        dataType: 'json'
                     }).then(function(data) {
-                        console.log(data);
+                        console.log('Return details sent' + data);
                     }).fail(function(error) {
-                        console.log(error);
+                        console.log('Something went wrong: ' + error.responseText);
                     })
-
+                    
                     orders.map((order) => {
                         let data = {
                             action	:'wps_rma_save_return_request',
@@ -823,7 +831,7 @@
                             refund_method : refund_method,
                             security_check	: wrael_common_param.wps_rma_nonce
                         }
-
+    
                         $.ajax({
                             url: wrael_common_param.ajaxurl, 
                             type: 'POST',  
