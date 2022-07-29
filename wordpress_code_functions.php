@@ -514,31 +514,6 @@
     add_action('wp_ajax_get_product_inventory', 'get_product_inventory');
     add_action('wp_ajax_nopriv_get_product_inventory', 'get_product_inventory'); 
 
-    // Function to accept return request using wps_rma_return_req_approve() as template
-    function return_req_approve() {
-        if (isset($_POST)) {
-            $orderid = $_POST['orderId'];
-            $productid = $_POST['productid'];
-
-            $return_datas = get_post_meta($orderid, 'wps_rma_return_product', true);
-            foreach ($return_datas as $key => $return_data) {
-                $return_products = $return_data['products'];
-                foreach ($return_products as $returnkey => &$return_product) {
-                    if ($return_product['item_id'] != $productid) {
-                        unset($return_product[$returnkey]);
-                    }
-                }
-            }
-            $products = $return_datas;
-            $response = wps_rma_return_req_approve_callback($orderid, $products);
-            echo json_encode($response);
-        }
-        die();
-    }
-    // This bit is a special action hook that works with the WordPress AJAX functionality.
-    add_action('wp_ajax_return_req_approve', 'return_req_approve');
-    add_action('wp_ajax_nopriv_return_req_approve', 'return_req_approve');
-
     // Function that will send return details to external database
     function send_return_info_to_external_db() {
         if (isset($_POST)) {
