@@ -171,7 +171,7 @@
                     </button>
                 </div>
 
-                <div class="b2bking_bulkorder_form_newline_template" style="display:none"><div class="b2bking_bulkorder_form_container_content_line"><input type="text" class="b2bking_bulkorder_form_container_content_line_product"><input type="number" min="0" step="1" class="b2bking_bulkorder_form_container_content_line_qty b2bking_bulkorder_form_container_content_line_qty_classic"><?php do_action('b2bking_bulkorder_column_header_mid_newline_content'); ?><div class="b2bking_bulkorder_form_container_content_line_subtotal">pricetext</div><div class="b2bking_bulkorder_form_container_content_line_livesearch"></div></div></div>
+                <div class="b2bking_bulkorder_form_newline_template" style="display:none"><div class="b2bking_bulkorder_form_container_content_line"><input type="text" class="b2bking_bulkorder_form_container_content_line_product"><input type="number" min="0" step="1" class="b2bking_bulkorder_form_container_content_line_qty b2bking_bulkorder_form_container_content_line_qty_classic"><?php do_action('b2bking_bulkorder_column_header_mid_newline_content'); ?><div class="b2bking_bulkorder_form_container_content_line_inv"></div><div class="b2bking_bulkorder_form_container_content_line_subtotal">pricetext</div><div class="b2bking_bulkorder_form_container_content_line_livesearch"></div></div></div>
 
                 <!-- add to cart button -->
                 <div class="b2bking_bulkorder_form_container_bottom">

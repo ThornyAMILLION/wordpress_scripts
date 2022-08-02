@@ -107,3 +107,11 @@ margin-left: 16%;
 .return-to-shop {
     display: none;
 }
+
+@media (min-width: 768px) {
+    .right-sidebar .content-area {
+            width: 100%;
+            float: none;
+            margin-right: initial;
+    }
+}

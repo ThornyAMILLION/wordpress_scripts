@@ -583,7 +583,7 @@
         ?>
         <script>
             jQuery(document).ready(function() {
-                $('.b2bking_bulkorder_form_container_content_line_livesearch').on('click', 'div.b2bking_livesearch_product_result', function() {
+                $('.b2bking_bulkorder_form_container_content').on('click', 'div.b2bking_livesearch_product_result', function() {
                     let ajaxurl = '<?php echo admin_url('admin-ajax.php') ?>'; // get ajaxurl
                     let thisSearchResult = $(this)[0];
                     let product_display = $(this)[0].innerText;
@@ -603,6 +603,7 @@
                             $(thisSearchResult).parent().parent().find('.b2bking_bulkorder_form_container_content_line_inv')[0].innerText = data.inventory;
                         } else {
                             console.log("Fail: " + data);
+                            $(thisSearchResult).parent().parent().find('.b2bking_bulkorder_form_container_content_line_inv')[0].innerText = '0';
                         }
                     }).fail(function(error) {
                         console.log("Something went wrong: " + error.responseText);
