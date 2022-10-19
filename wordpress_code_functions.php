@@ -38,7 +38,7 @@
     add_action('wp_footer', 'change_order_status');
 
     function change_order_status_ajax() {
-        if(isset($_POST)) {
+        if (isset($_POST)) {
             $order_number = $_POST['orderNum'];
             $order_status = $_POST['orderStatus'];
             $order_discount_check = $_POST['discountCheck'];
@@ -79,7 +79,7 @@
     }
     // This bit is a special action hook that works with the WordPress AJAX functionality.
     add_action('wp_ajax_change_order_status_ajax', 'change_order_status_ajax');
-    add_action('wp_ajax_nopriv_change_order_status_ajax', 'change_order_status_ajax'); 
+    add_action('wp_ajax_nopriv_change_order_status_ajax', 'change_order_status_ajax');
 
     add_filter('wc_product_has_unique_sku', '__return_false');
 
