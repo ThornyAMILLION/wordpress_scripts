@@ -537,8 +537,8 @@
             );
             
             $response = wp_remote_post($url, $args);
-            $response = json_encode($response);		
-            
+            $response = json_encode($response);
+                        
             // Return the result to the Javascript function (The Callback)
             if (is_wp_error($response)) {
                 $error_message = $response->get_error_message();
